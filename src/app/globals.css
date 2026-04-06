@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+:root {
+  --accent: #eb3449;
+  --accent-dark: #c42a3b;
+  --accent-light: #f05c6a;
+}
+
+body {
+  @apply bg-neutral-950 text-neutral-100;
+}
+
+.font-nabla {
+  font-family: "Nabla", sans-serif;
+}
