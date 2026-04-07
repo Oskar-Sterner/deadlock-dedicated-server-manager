@@ -148,12 +148,6 @@ func (m ServersModel) View() string {
 			name = name[:21] + "..."
 		}
 
-		statusPad := 12 - len(s.Status)
-		if statusPad < 0 {
-			statusPad = 0
-		}
-		status := StatusStyle(s.Status).Render(s.Status) + strings.Repeat(" ", statusPad)
-
 		players := "\u2014"
 		if s.Status == "running" {
 			players = fmt.Sprintf("%d/%d", s.Players, s.MaxPlayers)
@@ -166,13 +160,21 @@ func (m ServersModel) View() string {
 			mem = fmt.Sprintf("%.0fMB", s.Stats.MemoryMB)
 		}
 
-		line := fmt.Sprintf("  %-10s %-24s %s%-8d %-12s %-10s %-12s", id, name, status, s.Port, players, cpu, mem)
+		// Build line with plain text (no ANSI) so padding is correct
+		line := fmt.Sprintf("  %-10s %-24s %-12s %-8d %-12s %-10s %-12s", id, name, s.Status, s.Port, players, cpu, mem)
 
-		if i == m.cursor {
-			line = lipgloss.NewStyle().Background(lipgloss.Color("#2a2a2a")).Width(m.width).Render(line)
-		} else {
-			line = lipgloss.NewStyle().Width(m.width).Render(line)
+		// Pad to full terminal width with spaces
+		for len(line) < m.width {
+			line += " "
 		}
+
+		// Apply cursor background to the full-width plain line
+		if i == m.cursor {
+			line = lipgloss.NewStyle().Background(lipgloss.Color("#2a2a2a")).Render(line)
+		}
+
+		// Insert status color last — replacing plain status text with styled version
+		line = strings.Replace(line, s.Status, StatusStyle(s.Status).Render(s.Status), 1)
 
 		b.WriteString(line)
 		b.WriteString("\n")
