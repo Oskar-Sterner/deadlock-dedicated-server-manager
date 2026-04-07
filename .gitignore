@@ -1,24 +1,12 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# Web dashboard
+web/.next/
+web/node_modules/
+web/.env
+web/.env.local
+web/.env.production
 
-# dependencies
-/node_modules
-/.pnp
-.pnp.*
-.yarn/*
-!.yarn/patches
-!.yarn/plugins
-!.yarn/releases
-!.yarn/versions
-
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
+# CLI
+cli/ddsm
 
 # misc
 .DS_Store
@@ -29,14 +17,6 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
-
-# env files
-.env
-.env.local
-.env.production
-
-# vercel
-.vercel
 
 # typescript
 *.tsbuildinfo
