@@ -1,0 +1,195 @@
+package tui
+
+import (
+	"strings"
+	"time"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+)
+
+const banner = `
+\u2588\u2588\u2588\u2588\u2588\u2588\u2557     \u2588\u2588\u2588\u2588\u2588\u2588\u2557     \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2557    \u2588\u2588\u2588\u2557   \u2588\u2588\u2588\u2557
+\u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2557    \u2588\u2588\u2554\u2550\u2550\u2588\u2588\u2557    \u2588\u2588\u2554\u2550\u2550\u2550\u2550\u255d    \u2588\u2588\u2588\u2588\u2557 \u2588\u2588\u2588\u2588\u2551
+\u2588\u2588\u2551  \u2588\u2588\u2551    \u2588\u2588\u2551  \u2588\u2588\u2551    \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2557    \u2588\u2588\u2554\u2588\u2588\u2588\u2588\u2554\u2588\u2588\u2551
+\u2588\u2588\u2551  \u2588\u2588\u2551    \u2588\u2588\u2551  \u2588\u2588\u2551    \u2554\u2550\u2550\u2550\u2550\u2588\u2588\u2551    \u2588\u2588\u2551\u255a\u2588\u2588\u2554\u255d\u2588\u2588\u2551
+\u2588\u2588\u2588\u2588\u2588\u2588\u2554\u255d    \u2588\u2588\u2588\u2588\u2588\u2588\u2554\u255d    \u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2551    \u2588\u2588\u2551 \u255a\u2550\u255d \u2588\u2588\u2551
+\u255a\u2550\u2550\u2550\u2550\u2550\u255d     \u255a\u2550\u2550\u2550\u2550\u2550\u255d     \u255a\u2550\u2550\u2550\u2550\u2550\u2550\u255d    \u255a\u2550\u255d     \u255a\u2550\u255d
+`
+
+type splashDoneMsg struct{}
+
+type Tab int
+
+const (
+	TabServers Tab = iota
+	TabConsole
+	TabConfig
+	TabTools
+)
+
+var tabNames = []string{"Servers", "Console", "Config", "Tools"}
+
+type Model struct {
+	splash    bool
+	activeTab Tab
+	servers   ServersModel
+	console   ConsoleModel
+	config    ConfigModel
+	tools     ToolsModel
+	width     int
+	height    int
+	quitting  bool
+}
+
+func NewModel() Model {
+	return Model{
+		splash:  true,
+		servers: NewServersModel(),
+		console: NewConsoleModel(),
+		config:  NewConfigModel(),
+		tools:   NewToolsModel(),
+	}
+}
+
+func (m Model) Init() tea.Cmd {
+	return tea.Batch(
+		tea.Tick(2*time.Second, func(t time.Time) tea.Msg {
+			return splashDoneMsg{}
+		}),
+		m.servers.Init(),
+	)
+}
+
+func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	switch msg := msg.(type) {
+	case tea.WindowSizeMsg:
+		m.width = msg.Width
+		m.height = msg.Height
+		contentHeight := msg.Height - 5
+		m.servers.SetSize(msg.Width, contentHeight)
+		m.console.SetSize(msg.Width, contentHeight)
+		m.config.SetSize(msg.Width, contentHeight)
+		m.tools.SetSize(msg.Width, contentHeight)
+		return m, nil
+
+	case splashDoneMsg:
+		m.splash = false
+		return m, nil
+
+	case tea.KeyMsg:
+		if m.splash {
+			m.splash = false
+			return m, nil
+		}
+
+		switch msg.String() {
+		case "ctrl+c":
+			m.quitting = true
+			m.console.Detach()
+			return m, tea.Quit
+		case "q":
+			if m.activeTab == TabConsole && m.console.inputFocus {
+				break
+			}
+			m.quitting = true
+			m.console.Detach()
+			return m, tea.Quit
+		case "tab":
+			m.activeTab = Tab((int(m.activeTab) + 1) % len(tabNames))
+			return m, nil
+		case "shift+tab":
+			m.activeTab = Tab((int(m.activeTab) - 1 + len(tabNames)) % len(tabNames))
+			return m, nil
+		}
+
+	case switchToConsoleMsg:
+		m.activeTab = TabConsole
+		cmd := m.console.AttachServer(msg.serverID)
+		m.console.input.Focus()
+		m.console.inputFocus = true
+		return m, cmd
+
+	case configEditDoneMsg:
+		return m, nil
+	}
+
+	var cmd tea.Cmd
+	switch m.activeTab {
+	case TabServers:
+		m.servers, cmd = m.servers.Update(msg)
+	case TabConsole:
+		m.console, cmd = m.console.Update(msg)
+	case TabConfig:
+		m.config, cmd = m.config.Update(msg)
+	case TabTools:
+		m.tools, cmd = m.tools.Update(msg)
+	}
+
+	return m, cmd
+}
+
+func (m Model) View() string {
+	if m.quitting {
+		return ""
+	}
+
+	if m.splash {
+		return m.splashView()
+	}
+
+	var b strings.Builder
+
+	var tabs []string
+	for i, name := range tabNames {
+		if Tab(i) == m.activeTab {
+			tabs = append(tabs, TabActiveStyle.Render(name))
+		} else {
+			tabs = append(tabs, TabInactiveStyle.Render(name))
+		}
+	}
+	tabBar := lipgloss.JoinHorizontal(lipgloss.Top, tabs...)
+	b.WriteString(TabBarStyle.Render(tabBar))
+	b.WriteString("\n")
+
+	switch m.activeTab {
+	case TabServers:
+		b.WriteString(m.servers.View())
+	case TabConsole:
+		b.WriteString(m.console.View())
+	case TabConfig:
+		b.WriteString(m.config.View())
+	case TabTools:
+		b.WriteString(m.tools.View())
+	}
+
+	statusBar := StatusBarStyle.Width(m.width).Render("DDSM v0.1.0  |  Tab/Shift+Tab: switch tabs  |  q: quit")
+	b.WriteString("\n")
+	b.WriteString(statusBar)
+
+	return b.String()
+}
+
+func (m Model) splashView() string {
+	splashContent := BannerStyle.Width(m.width).Render(banner)
+
+	subtitle := lipgloss.NewStyle().
+		Foreground(Gray).
+		Align(lipgloss.Center).
+		Width(m.width).
+		Render("Deadlock Dedicated Server Manager")
+
+	pressKey := lipgloss.NewStyle().
+		Foreground(Gray).
+		Align(lipgloss.Center).
+		Width(m.width).
+		Render("Press any key to continue...")
+
+	return lipgloss.JoinVertical(lipgloss.Center,
+		strings.Repeat("\n", m.height/4),
+		splashContent,
+		subtitle,
+		"",
+		pressKey,
+	)
+}
