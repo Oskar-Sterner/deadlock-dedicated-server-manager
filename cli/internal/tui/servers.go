@@ -128,20 +128,20 @@ func (m ServersModel) View() string {
 
 	var b strings.Builder
 
-	header := fmt.Sprintf("  %-8s %-18s %-10s %-7s %-10s %-8s %-10s", "ID", "NAME", "STATUS", "PORT", "PLAYERS", "CPU", "MEMORY")
+	header := fmt.Sprintf("  %-10s %-24s %-12s %-8s %-12s %-10s %-12s", "ID", "NAME", "STATUS", "PORT", "PLAYERS", "CPU", "MEMORY")
 	b.WriteString(lipgloss.NewStyle().Foreground(Gray).Render(header))
 	b.WriteString("\n")
-	b.WriteString(lipgloss.NewStyle().Foreground(Gray).Render("  " + strings.Repeat("\u2500", 75)))
+	b.WriteString(lipgloss.NewStyle().Foreground(Gray).Render("  " + strings.Repeat("\u2500", 90)))
 	b.WriteString("\n")
 
 	for i, s := range m.servers {
 		id := s.ID
-		if len(id) > 8 {
-			id = id[:8]
+		if len(id) > 10 {
+			id = id[:10]
 		}
 		name := s.Name
-		if len(name) > 18 {
-			name = name[:15] + "..."
+		if len(name) > 24 {
+			name = name[:21] + "..."
 		}
 
 		status := StatusStyle(s.Status).Render(s.Status)
@@ -158,7 +158,7 @@ func (m ServersModel) View() string {
 			mem = fmt.Sprintf("%.0fMB", s.Stats.MemoryMB)
 		}
 
-		line := fmt.Sprintf("  %-8s %-18s %-10s %-7d %-10s %-8s %-10s", id, name, status, s.Port, players, cpu, mem)
+		line := fmt.Sprintf("  %-10s %-24s %-12s %-8d %-12s %-10s %-12s", id, name, status, s.Port, players, cpu, mem)
 
 		if i == m.cursor {
 			line = lipgloss.NewStyle().Background(lipgloss.Color("#2a2a2a")).Render(line)
