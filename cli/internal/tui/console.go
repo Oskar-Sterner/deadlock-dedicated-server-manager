@@ -158,14 +158,17 @@ func (m ConsoleModel) Update(msg tea.Msg) (ConsoleModel, tea.Cmd) {
 			}
 		}
 
-		if m.inputFocus {
-			var cmd tea.Cmd
-			m.input, cmd = m.input.Update(msg)
-			cmds = append(cmds, cmd)
-		} else {
-			var cmd tea.Cmd
-			m.viewport, cmd = m.viewport.Update(msg)
-			cmds = append(cmds, cmd)
+		// Don't forward left/right to children — model uses those for tab switching
+		if msg.String() != "left" && msg.String() != "right" {
+			if m.inputFocus {
+				var cmd tea.Cmd
+				m.input, cmd = m.input.Update(msg)
+				cmds = append(cmds, cmd)
+			} else {
+				var cmd tea.Cmd
+				m.viewport, cmd = m.viewport.Update(msg)
+				cmds = append(cmds, cmd)
+			}
 		}
 	}
 

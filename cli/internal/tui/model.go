@@ -80,15 +80,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.activeTab = Tab((int(m.activeTab) - 1 + len(tabNames)) % len(tabNames))
 			return m, nil
 		case "right":
-			if !(m.activeTab == TabConsole && m.console.inputFocus) {
-				m.activeTab = Tab((int(m.activeTab) + 1) % len(tabNames))
-				return m, nil
-			}
+			m.activeTab = Tab((int(m.activeTab) + 1) % len(tabNames))
+			return m, nil
 		case "left":
-			if !(m.activeTab == TabConsole && m.console.inputFocus) {
-				m.activeTab = Tab((int(m.activeTab) - 1 + len(tabNames)) % len(tabNames))
-				return m, nil
-			}
+			m.activeTab = Tab((int(m.activeTab) - 1 + len(tabNames)) % len(tabNames))
+			return m, nil
 		}
 
 	case switchToConsoleMsg:
