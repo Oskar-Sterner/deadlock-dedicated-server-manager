@@ -7,7 +7,9 @@ import (
 	"os/exec"
 	"strings"
 
+	tea "github.com/charmbracelet/bubbletea"
 	"github.com/Oskar-Sterner/deadlock-dedicated-server-manager/cli/internal/ddsm"
+	"github.com/Oskar-Sterner/deadlock-dedicated-server-manager/cli/internal/tui"
 	"gopkg.in/yaml.v3"
 )
 
@@ -40,7 +42,15 @@ func main() {
 	ddsm.EnsureConfigDir()
 
 	if len(os.Args) < 2 {
-		fmt.Println("TUI not yet implemented")
+		ddsm.StartAutoSleep()
+		defer ddsm.StopAutoSleep()
+		defer ddsm.CloseDB()
+
+		p := tea.NewProgram(tui.NewModel(), tea.WithAltScreen())
+		if _, err := p.Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "TUI error: %v\n", err)
+			os.Exit(1)
+		}
 		os.Exit(0)
 	}
 
