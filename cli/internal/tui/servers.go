@@ -129,9 +129,13 @@ func (m ServersModel) View() string {
 	var b strings.Builder
 
 	header := fmt.Sprintf("  %-10s %-24s %-12s %-8s %-12s %-10s %-12s", "ID", "NAME", "STATUS", "PORT", "PLAYERS", "CPU", "MEMORY")
-	b.WriteString(lipgloss.NewStyle().Foreground(Gray).Render(header))
+	b.WriteString(lipgloss.NewStyle().Foreground(Gray).Width(m.width).Render(header))
 	b.WriteString("\n")
-	b.WriteString(lipgloss.NewStyle().Foreground(Gray).Render("  " + strings.Repeat("\u2500", 90)))
+	sepWidth := m.width - 4
+	if sepWidth < 20 {
+		sepWidth = 90
+	}
+	b.WriteString(lipgloss.NewStyle().Foreground(Gray).Render("  " + strings.Repeat("\u2500", sepWidth)))
 	b.WriteString("\n")
 
 	for i, s := range m.servers {
@@ -161,7 +165,9 @@ func (m ServersModel) View() string {
 		line := fmt.Sprintf("  %-10s %-24s %-12s %-8d %-12s %-10s %-12s", id, name, status, s.Port, players, cpu, mem)
 
 		if i == m.cursor {
-			line = lipgloss.NewStyle().Background(lipgloss.Color("#2a2a2a")).Render(line)
+			line = lipgloss.NewStyle().Background(lipgloss.Color("#2a2a2a")).Width(m.width).Render(line)
+		} else {
+			line = lipgloss.NewStyle().Width(m.width).Render(line)
 		}
 
 		b.WriteString(line)
