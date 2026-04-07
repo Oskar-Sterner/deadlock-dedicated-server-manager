@@ -32,7 +32,7 @@ func DefaultConfig() Config {
 		RconPassword: "ddsm_rcon_secret",
 		ServersDir:   "/opt/deadlock-servers",
 		DockerImage:  "deadlock-server",
-		DbPath:       filepath.Join(home, ".ddsm", "ddsm.db"),
+		DbPath:       filepath.Join(home, "deadlock-dedicated-server-manager", "data", "manager.db"),
 		AutoSleep: AutoSleepConfig{
 			Enabled:      true,
 			IdleTimeout:  300,

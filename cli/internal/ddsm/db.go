@@ -55,7 +55,7 @@ func migrate() {
 			id TEXT PRIMARY KEY,
 			name TEXT NOT NULL,
 			port INTEGER NOT NULL,
-			map_name TEXT NOT NULL DEFAULT 'dl_streets',
+			[map] TEXT NOT NULL DEFAULT 'dl_streets',
 			password TEXT NOT NULL DEFAULT '',
 			steam_login TEXT NOT NULL,
 			steam_pass TEXT NOT NULL,
@@ -81,7 +81,7 @@ func SetSetting(key, value string) {
 }
 
 func ListServers() ([]ServerRow, error) {
-	rows, err := GetDB().Query("SELECT id, name, port, map_name, password, steam_login, steam_pass, steam_2fa, skip_update, container_id, created_at FROM servers ORDER BY created_at DESC")
+	rows, err := GetDB().Query("SELECT id, name, port, [map], password, steam_login, steam_pass, steam_2fa, skip_update, container_id, created_at FROM servers ORDER BY created_at DESC")
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +100,7 @@ func ListServers() ([]ServerRow, error) {
 
 func GetServer(id string) (*ServerRow, error) {
 	var s ServerRow
-	err := GetDB().QueryRow("SELECT id, name, port, map_name, password, steam_login, steam_pass, steam_2fa, skip_update, container_id, created_at FROM servers WHERE id = ?", id).
+	err := GetDB().QueryRow("SELECT id, name, port, [map], password, steam_login, steam_pass, steam_2fa, skip_update, container_id, created_at FROM servers WHERE id = ?", id).
 		Scan(&s.ID, &s.Name, &s.Port, &s.Map, &s.Password, &s.SteamLogin, &s.SteamPass, &s.Steam2FA, &s.SkipUpdate, &s.ContainerID, &s.CreatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
@@ -122,7 +122,7 @@ func GetNextPort() int {
 
 func InsertServer(s *ServerRow) error {
 	_, err := GetDB().Exec(`
-		INSERT INTO servers (id, name, port, map_name, password, steam_login, steam_pass, steam_2fa, skip_update, container_id)
+		INSERT INTO servers (id, name, port, [map], password, steam_login, steam_pass, steam_2fa, skip_update, container_id)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		s.ID, s.Name, s.Port, s.Map, s.Password, s.SteamLogin, s.SteamPass, s.Steam2FA, s.SkipUpdate, s.ContainerID)
 	return err
@@ -134,7 +134,7 @@ func UpdateServerContainerID(id, containerID string) error {
 }
 
 func UpdateServerFields(id, name, mapName, password string) error {
-	_, err := GetDB().Exec("UPDATE servers SET name = ?, map_name = ?, password = ? WHERE id = ?", name, mapName, password, id)
+	_, err := GetDB().Exec("UPDATE servers SET name = ?, [map] = ?, password = ? WHERE id = ?", name, mapName, password, id)
 	return err
 }
 
