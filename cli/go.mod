@@ -3,6 +3,8 @@ module github.com/Oskar-Sterner/deadlock-dedicated-server-manager/cli
 go 1.22.2
 
 require (
+	github.com/docker/docker v28.5.2+incompatible // indirect
+	github.com/docker/go-connections v0.6.0 // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/glebarez/go-sqlite v1.22.0 // indirect
 	github.com/google/uuid v1.5.0 // indirect
