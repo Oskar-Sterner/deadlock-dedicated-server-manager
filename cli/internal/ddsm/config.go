@@ -102,3 +102,11 @@ func EnsureConfigDir() error {
 	home, _ := os.UserHomeDir()
 	return os.MkdirAll(filepath.Join(home, ".ddsm"), 0755)
 }
+
+func WriteConfigFile(path string) error {
+	data, err := yaml.Marshal(Cfg)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(path, data, 0644)
+}

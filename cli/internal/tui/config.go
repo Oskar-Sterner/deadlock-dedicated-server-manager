@@ -43,6 +43,11 @@ func openEditor() tea.Cmd {
 		editor = "nano"
 	}
 	path := ddsm.ConfigPath()
+	// Write current config to file if it doesn't exist
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		ddsm.EnsureConfigDir()
+		ddsm.WriteConfigFile(path)
+	}
 	c := exec.Command(editor, path)
 	// Fix for terminals like kitty that may not have terminfo on the server
 	c.Env = append(os.Environ(), "TERM=xterm")
