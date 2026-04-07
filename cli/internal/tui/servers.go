@@ -160,21 +160,23 @@ func (m ServersModel) View() string {
 			mem = fmt.Sprintf("%.0fMB", s.Stats.MemoryMB)
 		}
 
-		// Build line with plain text (no ANSI) so padding is correct
-		line := fmt.Sprintf("  %-10s %-24s %-12s %-8d %-12s %-10s %-12s", id, name, s.Status, s.Port, players, cpu, mem)
+		// Color status with raw ANSI (no reset) so it doesn't break row background
+		statusColored := statusAnsi(s.Status) + fmt.Sprintf("%-12s", s.Status) + "\033[0m"
 
-		// Pad to full terminal width with spaces
-		for len(line) < m.width {
-			line += " "
+		// Build line — statusColored has ANSI but fixed visible width of 12
+		line := fmt.Sprintf("  %-10s %-24s %s%-8d %-12s %-10s %-12s", id, name, statusColored, s.Port, players, cpu, mem)
+
+		// Pad to full width based on visible length (subtract ANSI overhead)
+		visibleLen := 2 + 10 + 24 + 12 + 8 + 12 + 10 + 12
+		pad := m.width - visibleLen
+		if pad > 0 {
+			line += strings.Repeat(" ", pad)
 		}
 
-		// Apply cursor background to the full-width plain line
 		if i == m.cursor {
-			line = lipgloss.NewStyle().Background(lipgloss.Color("#2a2a2a")).Render(line)
+			// Use raw ANSI background to wrap entire line without reset issues
+			line = "\033[48;2;42;42;42m" + line + "\033[0m"
 		}
-
-		// Insert status color last — replacing plain status text with styled version
-		line = strings.Replace(line, s.Status, StatusStyle(s.Status).Render(s.Status), 1)
 
 		b.WriteString(line)
 		b.WriteString("\n")
@@ -189,6 +191,21 @@ func (m ServersModel) View() string {
 	b.WriteString("\n")
 
 	return b.String()
+}
+
+func statusAnsi(status string) string {
+	switch status {
+	case "running":
+		return "\033[1;38;2;74;222;128m" // green bold
+	case "exited", "stopped", "dead":
+		return "\033[1;38;2;239;68;68m" // red bold
+	case "sleeping":
+		return "\033[1;38;2;250;204;21m" // yellow bold
+	case "waking":
+		return "\033[1;38;2;96;165;250m" // blue bold
+	default:
+		return "\033[38;2;163;163;163m" // gray
+	}
 }
 
 func (m *ServersModel) SetSize(w, h int) {
