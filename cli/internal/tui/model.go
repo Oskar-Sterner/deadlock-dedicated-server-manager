@@ -79,6 +79,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "shift+tab":
 			m.activeTab = Tab((int(m.activeTab) - 1 + len(tabNames)) % len(tabNames))
 			return m, nil
+		case "right":
+			if !(m.activeTab == TabConsole && m.console.inputFocus) {
+				m.activeTab = Tab((int(m.activeTab) + 1) % len(tabNames))
+				return m, nil
+			}
+		case "left":
+			if !(m.activeTab == TabConsole && m.console.inputFocus) {
+				m.activeTab = Tab((int(m.activeTab) - 1 + len(tabNames)) % len(tabNames))
+				return m, nil
+			}
 		}
 
 	case switchToConsoleMsg:
@@ -116,7 +126,7 @@ func (m Model) View() string {
 
 	// Banner top-left
 	b.WriteString(BannerStyle.Render(banner))
-	b.WriteString("\n")
+	b.WriteString("\n\n")
 
 	// Tab bar below banner
 	var tabs []string
@@ -144,7 +154,7 @@ func (m Model) View() string {
 	}
 
 	// Status bar
-	statusBar := StatusBarStyle.Width(m.width).Render("DDSM v0.1.0  |  Tab/Shift+Tab: switch tabs  |  q: quit")
+	statusBar := StatusBarStyle.Width(m.width).Render("DDSM v0.1.0  |  arrows/tab: switch tabs  |  q: quit")
 	b.WriteString("\n")
 	b.WriteString(statusBar)
 
