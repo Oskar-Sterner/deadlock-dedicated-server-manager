@@ -148,7 +148,11 @@ func (m ServersModel) View() string {
 			name = name[:21] + "..."
 		}
 
-		status := StatusStyle(s.Status).Render(s.Status)
+		statusPad := 12 - len(s.Status)
+		if statusPad < 0 {
+			statusPad = 0
+		}
+		status := StatusStyle(s.Status).Render(s.Status) + strings.Repeat(" ", statusPad)
 
 		players := "\u2014"
 		if s.Status == "running" {
@@ -162,7 +166,7 @@ func (m ServersModel) View() string {
 			mem = fmt.Sprintf("%.0fMB", s.Stats.MemoryMB)
 		}
 
-		line := fmt.Sprintf("  %-10s %-24s %-12s %-8d %-12s %-10s %-12s", id, name, status, s.Port, players, cpu, mem)
+		line := fmt.Sprintf("  %-10s %-24s %s%-8d %-12s %-10s %-12s", id, name, status, s.Port, players, cpu, mem)
 
 		if i == m.cursor {
 			line = lipgloss.NewStyle().Background(lipgloss.Color("#2a2a2a")).Width(m.width).Render(line)
