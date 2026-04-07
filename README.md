@@ -2,8 +2,7 @@
   <img src="assets/logo.png" alt="DDSM Logo" width="200" style="border-radius: 16px;" />
 </p>
 
-<h1 align="center">DDSM</h1>
-<p align="center"><strong>Deadlock Dedicated Server Manager</strong></p>
+<h1 align="center">Deadlock Dedicated Server Manager</h1>
 
 > **Work in progress.** This project is under active development and comes with no guarantees of stability or flawless operation. Use at your own risk.
 
