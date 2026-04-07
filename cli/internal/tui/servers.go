@@ -160,8 +160,8 @@ func (m ServersModel) View() string {
 			mem = fmt.Sprintf("%.0fMB", s.Stats.MemoryMB)
 		}
 
-		// Color status with raw ANSI (no reset) so it doesn't break row background
-		statusColored := statusAnsi(s.Status) + fmt.Sprintf("%-12s", s.Status) + "\033[0m"
+		// Color status — reset only foreground (39) and bold (22), preserve background
+		statusColored := statusAnsi(s.Status) + fmt.Sprintf("%-12s", s.Status) + "\033[39;22m"
 
 		// Build line — statusColored has ANSI but fixed visible width of 12
 		line := fmt.Sprintf("  %-10s %-24s %s%-8d %-12s %-10s %-12s", id, name, statusColored, s.Port, players, cpu, mem)
