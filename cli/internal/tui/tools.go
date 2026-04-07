@@ -78,11 +78,11 @@ func (m ToolsModel) Update(msg tea.Msg) (ToolsModel, tea.Cmd) {
 
 	case tea.KeyMsg:
 		switch {
-		case key.Matches(msg, key.NewBinding(key.WithKeys("j", "down"))):
+		case key.Matches(msg, key.NewBinding(key.WithKeys("down"))):
 			if m.cursor < len(m.menuItems)-1 {
 				m.cursor++
 			}
-		case key.Matches(msg, key.NewBinding(key.WithKeys("k", "up"))):
+		case key.Matches(msg, key.NewBinding(key.WithKeys("up"))):
 			if m.cursor > 0 {
 				m.cursor--
 			}
@@ -150,7 +150,7 @@ func (m ToolsModel) View() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(HelpStyle.Render("  enter select  j/k navigate"))
+	b.WriteString(HelpStyle.Render("  enter select  up/down navigate"))
 	b.WriteString("\n")
 
 	return b.String()

@@ -44,6 +44,8 @@ func openEditor() tea.Cmd {
 	}
 	path := ddsm.ConfigPath()
 	c := exec.Command(editor, path)
+	// Fix for terminals like kitty that may not have terminfo on the server
+	c.Env = append(os.Environ(), "TERM=xterm")
 	return tea.ExecProcess(c, func(err error) tea.Msg {
 		return configEditDoneMsg{}
 	})

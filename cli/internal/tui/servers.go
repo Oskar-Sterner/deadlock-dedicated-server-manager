@@ -67,11 +67,11 @@ func (m ServersModel) Update(msg tea.Msg) (ServersModel, tea.Cmd) {
 
 	case tea.KeyMsg:
 		switch {
-		case key.Matches(msg, key.NewBinding(key.WithKeys("j", "down"))):
+		case key.Matches(msg, key.NewBinding(key.WithKeys("down"))):
 			if m.cursor < len(m.servers)-1 {
 				m.cursor++
 			}
-		case key.Matches(msg, key.NewBinding(key.WithKeys("k", "up"))):
+		case key.Matches(msg, key.NewBinding(key.WithKeys("up"))):
 			if m.cursor > 0 {
 				m.cursor--
 			}
