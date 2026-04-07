@@ -349,7 +349,7 @@ func cmdConfig() {
 }
 
 func cmdDoctor() {
-	fmt.Println("Running health checks...\n")
+	fmt.Println("Running health checks...")
 	results := ddsm.RunDoctor()
 	ddsm.PrintDoctorResults(results)
 }
