@@ -2,21 +2,16 @@ package tui
 
 import (
 	"strings"
-	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
 
-const banner = `
- ____    ____    ____    __  __
+const banner = ` ____    ____    ____    __  __
 |  _ \  |  _ \  / ___|  |  \/  |
 | | | | | | | | \___ \  | |\/| |
 | |_| | | |_| |  ___) | | |  | |
-|____/  |____/  |____/  |_|  |_|
-`
-
-type splashDoneMsg struct{}
+|____/  |____/  |____/  |_|  |_|`
 
 type Tab int
 
@@ -30,7 +25,6 @@ const (
 var tabNames = []string{"Servers", "Console", "Config", "Tools"}
 
 type Model struct {
-	splash    bool
 	activeTab Tab
 	servers   ServersModel
 	console   ConsoleModel
@@ -43,7 +37,6 @@ type Model struct {
 
 func NewModel() Model {
 	return Model{
-		splash:  true,
 		servers: NewServersModel(),
 		console: NewConsoleModel(),
 		config:  NewConfigModel(),
@@ -52,12 +45,7 @@ func NewModel() Model {
 }
 
 func (m Model) Init() tea.Cmd {
-	return tea.Batch(
-		tea.Tick(2*time.Second, func(t time.Time) tea.Msg {
-			return splashDoneMsg{}
-		}),
-		m.servers.Init(),
-	)
+	return m.servers.Init()
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -65,23 +53,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
-		contentHeight := msg.Height - 5
+		contentHeight := msg.Height - 12 // banner + tab bar + status bar
 		m.servers.SetSize(msg.Width, contentHeight)
 		m.console.SetSize(msg.Width, contentHeight)
 		m.config.SetSize(msg.Width, contentHeight)
 		m.tools.SetSize(msg.Width, contentHeight)
 		return m, nil
 
-	case splashDoneMsg:
-		m.splash = false
-		return m, nil
-
 	case tea.KeyMsg:
-		if m.splash {
-			m.splash = false
-			return m, nil
-		}
-
 		switch msg.String() {
 		case "ctrl+c":
 			m.quitting = true
@@ -133,12 +112,13 @@ func (m Model) View() string {
 		return ""
 	}
 
-	if m.splash {
-		return m.splashView()
-	}
-
 	var b strings.Builder
 
+	// Banner top-left
+	b.WriteString(BannerStyle.Render(banner))
+	b.WriteString("\n")
+
+	// Tab bar below banner
 	var tabs []string
 	for i, name := range tabNames {
 		if Tab(i) == m.activeTab {
@@ -151,6 +131,7 @@ func (m Model) View() string {
 	b.WriteString(TabBarStyle.Render(tabBar))
 	b.WriteString("\n")
 
+	// Active tab content
 	switch m.activeTab {
 	case TabServers:
 		b.WriteString(m.servers.View())
@@ -162,33 +143,10 @@ func (m Model) View() string {
 		b.WriteString(m.tools.View())
 	}
 
+	// Status bar
 	statusBar := StatusBarStyle.Width(m.width).Render("DDSM v0.1.0  |  Tab/Shift+Tab: switch tabs  |  q: quit")
 	b.WriteString("\n")
 	b.WriteString(statusBar)
 
 	return b.String()
-}
-
-func (m Model) splashView() string {
-	splashContent := BannerStyle.Width(m.width).Render(banner)
-
-	subtitle := lipgloss.NewStyle().
-		Foreground(Gray).
-		Align(lipgloss.Center).
-		Width(m.width).
-		Render("Deadlock Dedicated Server Manager")
-
-	pressKey := lipgloss.NewStyle().
-		Foreground(Gray).
-		Align(lipgloss.Center).
-		Width(m.width).
-		Render("Press any key to continue...")
-
-	return lipgloss.JoinVertical(lipgloss.Center,
-		strings.Repeat("\n", m.height/4),
-		splashContent,
-		subtitle,
-		"",
-		pressKey,
-	)
 }

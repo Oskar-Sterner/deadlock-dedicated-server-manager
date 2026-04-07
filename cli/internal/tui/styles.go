@@ -15,7 +15,7 @@ var (
 	BannerStyle = lipgloss.NewStyle().
 			Foreground(Red).
 			Bold(true).
-			Align(lipgloss.Center)
+			PaddingLeft(1)
 
 	TabActiveStyle = lipgloss.NewStyle().
 			Foreground(White).
