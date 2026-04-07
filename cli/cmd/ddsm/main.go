@@ -109,12 +109,12 @@ func cmdStatus() {
 		return
 	}
 
-	fmt.Printf("%-10s %-24s %-12s %-8s %-12s %-10s %-12s\n", "ID", "NAME", "STATUS", "PORT", "PLAYERS", "CPU", "MEMORY")
-	fmt.Println(strings.Repeat("─", 92))
+	fmt.Printf("%-20s %-24s %-12s %-8s %-12s %-10s %-12s\n", "ID", "NAME", "STATUS", "PORT", "PLAYERS", "CPU", "MEMORY")
+	fmt.Println(strings.Repeat("─", 102))
 	for _, s := range statuses {
 		id := s.ID
-		if len(id) > 10 {
-			id = id[:10]
+		if len(id) > 20 {
+			id = id[:20]
 		}
 		name := s.Name
 		if len(name) > 24 {
@@ -133,7 +133,7 @@ func cmdStatus() {
 			mem = fmt.Sprintf("%.0fMB", s.Stats.MemoryMB)
 		}
 
-		fmt.Printf("%-10s %-24s %-12s %-8d %-12s %-10s %-12s\n", id, name, s.Status, s.Port, players, cpu, mem)
+		fmt.Printf("%-20s %-24s %-12s %-8d %-12s %-10s %-12s\n", id, name, s.Status, s.Port, players, cpu, mem)
 	}
 }
 
