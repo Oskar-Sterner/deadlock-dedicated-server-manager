@@ -2,6 +2,8 @@
 
 > **Work in progress.** This project is under active development and comes with no guarantees of stability or flawless operation. Use at your own risk.
 
+> **CLI/TUI: Beta.** The Go CLI and terminal UI are in beta. Features may change, and bugs are expected. The web dashboard is more stable.
+
 Manage multiple [Deadlock](https://store.steampowered.com/app/1422450/Deadlock/) dedicated server instances on Linux. Includes a Go CLI with an interactive TUI and a Next.js web dashboard.
 
 Built on top of [deadlock-dedicated-proton-server](https://github.com/Oskar-Sterner/deadlock-dedicated-proton-server).
@@ -123,14 +125,13 @@ DDSM_DOCKER_IMAGE=deadlock-server
 
 ## Tech Stack
 
-**CLI:**
+**CLI (beta):**
 - [Go](https://go.dev/) 1.22+
 - [Bubble Tea](https://github.com/charmbracelet/bubbletea) -- terminal UI framework
 - [Lip Gloss](https://github.com/charmbracelet/lipgloss) -- TUI styling
-- [Cobra](https://github.com/spf13/cobra) -- CLI framework
-- [dockerclient](https://github.com/docker/docker) -- Docker Engine API
-- [go-sqlite3](https://github.com/mattn/go-sqlite3) -- SQLite database
-- [gorcon/rcon](https://github.com/gorcon/rcon) -- RCON client
+- [Docker SDK for Go](https://github.com/docker/docker) -- Docker Engine API
+- [go-sqlite](https://github.com/glebarez/go-sqlite) -- pure Go SQLite driver
+- [james4k/rcon](https://github.com/james4k/rcon) -- Source RCON client
 
 **Web Dashboard:**
 - [Bun](https://bun.sh/) runtime
