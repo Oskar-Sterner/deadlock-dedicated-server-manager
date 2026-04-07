@@ -35,7 +35,8 @@ var (
 
 	StatusBarStyle = lipgloss.NewStyle().
 			Foreground(Gray).
-			Align(lipgloss.Right)
+			Align(lipgloss.Right).
+			PaddingRight(1)
 
 	StatusRunning  = lipgloss.NewStyle().Foreground(Green).Bold(true)
 	StatusStopped  = lipgloss.NewStyle().Foreground(lipgloss.Color("#ef4444")).Bold(true)
