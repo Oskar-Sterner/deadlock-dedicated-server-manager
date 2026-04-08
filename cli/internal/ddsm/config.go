@@ -20,6 +20,7 @@ type Config struct {
 	ServersDir   string          `yaml:"servers_dir"`
 	DockerImage  string          `yaml:"docker_image"`
 	DbPath       string          `yaml:"db_path"`
+	BaseDir      string          `yaml:"base_dir"`
 	AutoSleep    AutoSleepConfig `yaml:"autosleep"`
 }
 
@@ -33,6 +34,7 @@ func DefaultConfig() Config {
 		ServersDir:   "/opt/deadlock-servers",
 		DockerImage:  "deadlock-server",
 		DbPath:       filepath.Join(home, "deadlock-dedicated-server-manager", "data", "manager.db"),
+		BaseDir:      "/opt/deadlock-base",
 		AutoSleep: AutoSleepConfig{
 			Enabled:      true,
 			IdleTimeout:  300,
@@ -75,6 +77,9 @@ func LoadConfig() error {
 	}
 	if v := os.Getenv("DDSM_DB_PATH"); v != "" {
 		Cfg.DbPath = v
+	}
+	if v := os.Getenv("DDSM_BASE_DIR"); v != "" {
+		Cfg.BaseDir = v
 	}
 	if v := os.Getenv("DDSM_AUTOSLEEP_ENABLED"); v != "" {
 		Cfg.AutoSleep.Enabled = v == "true" || v == "1"

@@ -229,6 +229,12 @@ func wakeServer(serverID string, port int, containerID string) {
 
 	time.Sleep(1 * time.Second)
 
+	if UsesOverlay(serverID) {
+		if err := MountOverlay(serverID); err != nil {
+			fmt.Printf("[autosleep] Failed to mount overlay for %s: %v\n", serverID, err)
+		}
+	}
+
 	if err := StartContainer(containerID); err != nil {
 		fmt.Printf("[autosleep] Failed to start container: %v\n", err)
 	} else {

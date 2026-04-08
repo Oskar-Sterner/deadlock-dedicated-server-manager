@@ -31,6 +31,7 @@ Usage:
   ddsm attach [id]         Attach to server container
   ddsm config              Show current configuration
   ddsm config edit         Open config in $EDITOR
+  ddsm update-base         Download/update shared game files
   ddsm doctor              Run health diagnostics
 `
 
@@ -42,6 +43,7 @@ func main() {
 	ddsm.EnsureConfigDir()
 
 	if len(os.Args) < 2 {
+		ddsm.MountAllOverlays()
 		ddsm.StartAutoSleep()
 		defer ddsm.StopAutoSleep()
 		defer ddsm.CloseDB()
@@ -87,6 +89,9 @@ func main() {
 
 	case "config":
 		cmdConfig()
+
+	case "update-base":
+		cmdUpdateBase()
 
 	case "doctor":
 		cmdDoctor()
@@ -346,6 +351,51 @@ func cmdConfig() {
 		data, _ := yaml.Marshal(ddsm.Cfg)
 		fmt.Print(string(data))
 	}
+}
+
+func cmdUpdateBase() {
+	if ddsm.BaseInstalled() {
+		fmt.Printf("Base install found at %s\n", ddsm.Cfg.BaseDir)
+		fmt.Print("Re-download/update? [y/N]: ")
+		reader := bufio.NewReader(os.Stdin)
+		answer, _ := reader.ReadString('\n')
+		if strings.TrimSpace(strings.ToLower(answer)) != "y" {
+			fmt.Println("Aborted.")
+			return
+		}
+	}
+
+	reader := bufio.NewReader(os.Stdin)
+
+	fmt.Print("Steam login: ")
+	steamLogin, _ := reader.ReadString('\n')
+	steamLogin = strings.TrimSpace(steamLogin)
+	if steamLogin == "" {
+		fmt.Fprintln(os.Stderr, "Steam login is required")
+		os.Exit(1)
+	}
+
+	fmt.Print("Steam password: ")
+	steamPass, _ := reader.ReadString('\n')
+	steamPass = strings.TrimSpace(steamPass)
+	if steamPass == "" {
+		fmt.Fprintln(os.Stderr, "Steam password is required")
+		os.Exit(1)
+	}
+
+	fmt.Print("Steam 2FA code (optional): ")
+	steam2FA, _ := reader.ReadString('\n')
+	steam2FA = strings.TrimSpace(steam2FA)
+
+	fmt.Printf("\nDownloading game files to %s...\n", ddsm.Cfg.BaseDir)
+	fmt.Println("This will take a while (~34GB download).")
+	fmt.Println()
+
+	if err := ddsm.UpdateBase(steamLogin, steamPass, steam2FA); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Println("\nBase install updated. New servers will use shared game files via overlay.")
 }
 
 func cmdDoctor() {
