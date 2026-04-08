@@ -16,10 +16,6 @@ type tickMsg struct{}
 type serverActionDoneMsg struct {
 	message string
 }
-type switchToConsoleMsg struct {
-	serverID string
-}
-
 type ServersModel struct {
 	servers    []*ddsm.ServerStatus
 	cursor     int

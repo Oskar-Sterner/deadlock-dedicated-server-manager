@@ -17,17 +17,15 @@ type Tab int
 
 const (
 	TabServers Tab = iota
-	TabConsole
 	TabConfig
 	TabTools
 )
 
-var tabNames = []string{"Servers", "Console", "Config", "Tools"}
+var tabNames = []string{"Servers", "Config", "Tools"}
 
 type Model struct {
 	activeTab Tab
 	servers   ServersModel
-	console   ConsoleModel
 	config    ConfigModel
 	tools     ToolsModel
 	width     int
@@ -38,7 +36,6 @@ type Model struct {
 func NewModel() Model {
 	return Model{
 		servers: NewServersModel(),
-		console: NewConsoleModel(),
 		config:  NewConfigModel(),
 		tools:   NewToolsModel(),
 	}
@@ -55,7 +52,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.height = msg.Height
 		contentHeight := msg.Height - 12 // banner + tab bar + status bar
 		m.servers.SetSize(msg.Width, contentHeight)
-		m.console.SetSize(msg.Width, contentHeight)
 		m.config.SetSize(msg.Width, contentHeight)
 		m.tools.SetSize(msg.Width, contentHeight)
 		return m, nil
@@ -66,17 +62,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c":
 			m.quitting = true
-			m.console.Detach()
 			return m, tea.Quit
 		case "q":
-			if m.activeTab == TabConsole && m.console.inputFocus {
-				break
-			}
 			if inputActive {
 				break
 			}
 			m.quitting = true
-			m.console.Detach()
 			return m, tea.Quit
 		case "tab":
 			if inputActive {
@@ -104,13 +95,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 
-	case switchToConsoleMsg:
-		m.activeTab = TabConsole
-		cmd := m.console.AttachServer(msg.serverID)
-		m.console.input.Focus()
-		m.console.inputFocus = true
-		return m, cmd
-
 	case configEditDoneMsg:
 		// Fall through to let active tab handle it
 	}
@@ -119,8 +103,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch m.activeTab {
 	case TabServers:
 		m.servers, cmd = m.servers.Update(msg)
-	case TabConsole:
-		m.console, cmd = m.console.Update(msg)
 	case TabConfig:
 		m.config, cmd = m.config.Update(msg)
 	case TabTools:
@@ -158,8 +140,6 @@ func (m Model) View() string {
 	switch m.activeTab {
 	case TabServers:
 		b.WriteString(m.servers.View())
-	case TabConsole:
-		b.WriteString(m.console.View())
 	case TabConfig:
 		b.WriteString(m.config.View())
 	case TabTools:
