@@ -192,8 +192,6 @@ func (m ConsoleModel) View() string {
 
 	var b strings.Builder
 
-	title := TitleStyle.Render(fmt.Sprintf("  Console: %s (port %d)", m.serverName, m.serverPort))
-	b.WriteString(title)
 	b.WriteString("\n")
 
 	b.WriteString(m.viewport.View())

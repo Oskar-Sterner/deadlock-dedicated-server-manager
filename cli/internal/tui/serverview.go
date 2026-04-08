@@ -13,11 +13,12 @@ type ServerTab int
 
 const (
 	ServerTabConsole ServerTab = iota
+	ServerTabSettings
 	ServerTabConfig
 	ServerTabExplorer
 )
 
-var serverTabNames = []string{"Console", "Config", "Explorer"}
+var serverTabNames = []string{"Console", "Settings", "Config", "Explorer"}
 
 type exitServerViewMsg struct{}
 
@@ -27,70 +28,108 @@ type ServerViewModel struct {
 	serverName string
 	serverPort int
 	console    ConsoleModel
+	settings   SettingsModel
 	config     ServerConfigModel
 	explorer   ExplorerModel
 	width      int
 	height     int
 }
 
-func NewServerViewModel(serverID string) ServerViewModel {
+func NewServerViewModel(serverID string) (ServerViewModel, tea.Cmd) {
 	server, _ := ddsm.GetServer(serverID)
 	if server == nil {
-		return ServerViewModel{}
+		return ServerViewModel{}, nil
 	}
 
 	volumePath := ddsm.ServerVolumePath(serverID)
+
+	console := NewConsoleModel()
+	console.inputFocus = false
+	console.input.Blur()
+	cmd := console.AttachServer(serverID)
 
 	m := ServerViewModel{
 		serverID:   serverID,
 		serverName: server.Name,
 		serverPort: server.Port,
-		console:    NewConsoleModel(),
+		console:    console,
+		settings:   NewSettingsModel(serverID),
 		config:     NewServerConfigModel(volumePath),
 		explorer:   NewExplorerModel(volumePath),
 	}
-	// Start with console input unfocused so q/tab work for navigation.
-	// User presses esc to focus the input for typing RCON commands.
-	m.console.inputFocus = false
-	m.console.input.Blur()
-	return m
+	return m, cmd
 }
 
 func (m ServerViewModel) Init() tea.Cmd {
-	return m.console.AttachServer(m.serverID)
+	return nil
 }
 
 func (m ServerViewModel) Update(msg tea.Msg) (ServerViewModel, tea.Cmd) {
+	// Route settings saved messages regardless of active tab
+	if saved, ok := msg.(settingsSavedMsg); ok {
+		if saved.err == nil {
+			if server, _ := ddsm.GetServer(m.serverID); server != nil {
+				m.serverName = server.Name
+				m.serverPort = server.Port
+			}
+			m.console.Detach()
+			cmd := m.console.AttachServer(m.serverID)
+			m.settings, _ = m.settings.Update(msg)
+			return m, cmd
+		}
+		m.settings, _ = m.settings.Update(msg)
+		return m, nil
+	}
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		// Only block navigation when actively editing a field
+		inputActive := (m.activeTab == ServerTabConsole && m.console.inputFocus) ||
+			(m.activeTab == ServerTabSettings && m.settings.IsEditing())
+
 		switch msg.String() {
 		case "q":
-			// If console input is focused, let it type 'q'
-			if m.activeTab == ServerTabConsole && m.console.inputFocus {
+			if inputActive {
 				break
 			}
 			m.console.Detach()
 			return m, func() tea.Msg { return exitServerViewMsg{} }
 
 		case "esc":
-			// Console tab: if input focused, unfocus first; otherwise exit
 			if m.activeTab == ServerTabConsole && m.console.inputFocus {
 				m.console.inputFocus = false
 				m.console.input.Blur()
 				return m, nil
 			}
+			if m.activeTab == ServerTabSettings && m.settings.IsEditing() {
+				break // let settings handle esc
+			}
 			m.console.Detach()
 			return m, func() tea.Msg { return exitServerViewMsg{} }
 
-		case "tab", "right":
-			if m.activeTab == ServerTabConsole && m.console.inputFocus {
-				break // let console handle it
+		case "right":
+			if inputActive {
+				break
 			}
 			m.activeTab = ServerTab((int(m.activeTab) + 1) % len(serverTabNames))
 			return m, nil
 
-		case "shift+tab", "left":
-			if m.activeTab == ServerTabConsole && m.console.inputFocus {
+		case "left":
+			if inputActive {
+				break
+			}
+			m.activeTab = ServerTab((int(m.activeTab) - 1 + len(serverTabNames)) % len(serverTabNames))
+			return m, nil
+
+		case "tab":
+			if inputActive {
+				break
+			}
+			m.activeTab = ServerTab((int(m.activeTab) + 1) % len(serverTabNames))
+			return m, nil
+
+		case "shift+tab":
+			if inputActive {
 				break
 			}
 			m.activeTab = ServerTab((int(m.activeTab) - 1 + len(serverTabNames)) % len(serverTabNames))
@@ -102,6 +141,8 @@ func (m ServerViewModel) Update(msg tea.Msg) (ServerViewModel, tea.Cmd) {
 	switch m.activeTab {
 	case ServerTabConsole:
 		m.console, cmd = m.console.Update(msg)
+	case ServerTabSettings:
+		m.settings, cmd = m.settings.Update(msg)
 	case ServerTabConfig:
 		m.config, cmd = m.config.Update(msg)
 	case ServerTabExplorer:
@@ -114,11 +155,9 @@ func (m ServerViewModel) Update(msg tea.Msg) (ServerViewModel, tea.Cmd) {
 func (m ServerViewModel) View() string {
 	var b strings.Builder
 
-	// Server title
 	b.WriteString(TitleStyle.Render(fmt.Sprintf("  %s (port %d)", m.serverName, m.serverPort)))
 	b.WriteString("\n")
 
-	// Sub-tab bar
 	var tabs []string
 	for i, name := range serverTabNames {
 		if ServerTab(i) == m.activeTab {
@@ -131,10 +170,11 @@ func (m ServerViewModel) View() string {
 	b.WriteString("  " + tabBar)
 	b.WriteString("\n")
 
-	// Active sub-tab content
 	switch m.activeTab {
 	case ServerTabConsole:
 		b.WriteString(m.console.View())
+	case ServerTabSettings:
+		b.WriteString(m.settings.View())
 	case ServerTabConfig:
 		b.WriteString(m.config.View())
 	case ServerTabExplorer:
@@ -149,6 +189,7 @@ func (m *ServerViewModel) SetSize(w, h int) {
 	m.height = h
 	contentHeight := h - 4
 	m.console.SetSize(w, contentHeight)
+	m.settings.SetSize(w, contentHeight)
 	m.config.SetSize(w, contentHeight)
 	m.explorer.SetSize(w, contentHeight)
 }

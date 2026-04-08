@@ -139,7 +139,7 @@ func InstallDeadworks(volumePath string) error {
 	}
 
 	// Fix ownership for steam user (uid 1000)
-	exec.Command("chown", "-R", "1000:1000", deadlockDir).Run()
+	exec.Command("find", deadlockDir, "!", "-user", "1000", "-exec", "chown", "1000:1000", "{}", ";").Run()
 
 	return nil
 }
@@ -443,5 +443,201 @@ func UpdateBase(steamLogin, steamPass, steam2FA string) error {
 	if !success {
 		return fmt.Errorf("update did not complete successfully — check logs above")
 	}
+	return nil
+}
+
+// UpdateServerAndRecreate updates DB fields, removes the old container,
+// creates a new one with updated env vars, and starts it.
+func UpdateServerAndRecreate(id, name, mapName, password string) error {
+	server, err := GetServer(id)
+	if err != nil || server == nil {
+		return fmt.Errorf("server not found: %s", id)
+	}
+
+	// Update database
+	if err := UpdateServerFields(id, name, mapName, password); err != nil {
+		return fmt.Errorf("failed to update server: %w", err)
+	}
+
+	if !server.ContainerID.Valid {
+		return nil
+	}
+
+	// Remove old container
+	RemoveContainer(server.ContainerID.String)
+
+	// Determine volume path
+	volumePath := ServerVolumePath(id)
+	useOverlay := UsesOverlay(id)
+
+	if useOverlay {
+		if err := MountOverlay(id); err != nil {
+			return fmt.Errorf("failed to mount overlay: %w", err)
+		}
+	}
+
+	skipUpdate := "0"
+	if useOverlay {
+		skipUpdate = "1"
+	}
+
+	deadworksFlag := "0"
+	if server.Deadworks == 1 {
+		deadworksFlag = "1"
+	}
+
+	env := map[string]string{
+		"PORT":            fmt.Sprintf("%d", server.Port),
+		"MAP":             mapName,
+		"SERVER_PASSWORD": password,
+		"STEAM_LOGIN":     server.SteamLogin,
+		"STEAM_PASSWORD":  server.SteamPass,
+		"STEAM_2FA_CODE":  server.Steam2FA,
+		"SKIP_UPDATE":     skipUpdate,
+		"DEADWORKS":       deadworksFlag,
+	}
+
+	containerName := fmt.Sprintf("deadlock-%s", id[:8])
+	containerID, err := CreateContainer(containerName, server.Port, env, volumePath, useOverlay)
+	if err != nil {
+		return fmt.Errorf("failed to create container: %w", err)
+	}
+
+	if err := UpdateServerContainerID(id, containerID); err != nil {
+		return fmt.Errorf("failed to update container ID: %w", err)
+	}
+
+	if err := StartContainer(containerID); err != nil {
+		return fmt.Errorf("failed to start container: %w", err)
+	}
+
+	return nil
+}
+// CreateServerWithProgress is like CreateServer but sends progress updates to a channel.
+func CreateServerWithProgress(opts ServerCreateOpts, progress chan<- string) (*ServerRow, error) {
+	defer close(progress)
+
+	id := uuid.New().String()
+	useOverlay := BaseInstalled()
+
+	progress <- "Setting up server directories..."
+
+	var volumePath string
+	if useOverlay {
+		if err := SetupOverlayDirs(id); err != nil {
+			return nil, fmt.Errorf("failed to setup overlay: %w", err)
+		}
+		if err := MountOverlay(id); err != nil {
+			return nil, fmt.Errorf("failed to mount overlay: %w", err)
+		}
+		volumePath = MergedPath(id)
+	} else {
+		volumePath = filepath.Join(Cfg.ServersDir, id)
+		if err := os.MkdirAll(volumePath, 0755); err != nil {
+			return nil, fmt.Errorf("failed to create server directory: %w", err)
+		}
+	}
+
+	progress <- "Writing startup script..."
+
+	dest := filepath.Join(volumePath, "start.sh")
+	os.WriteFile(dest, []byte(defaultStartScript), 0755)
+	os.Chown(dest, 1000, 1000)
+
+	if opts.Deadworks {
+		progress <- "Downloading Deadworks framework..."
+		if err := InstallDeadworksWithProgress(volumePath, progress); err != nil {
+			return nil, fmt.Errorf("failed to install Deadworks: %w", err)
+		}
+	}
+
+	progress <- "Creating Docker container..."
+
+	containerName := fmt.Sprintf("deadlock-%s", id[:8])
+	skipUpdate := "0"
+	if useOverlay {
+		skipUpdate = "1"
+	}
+
+	deadworksFlag := "0"
+	if opts.Deadworks {
+		deadworksFlag = "1"
+	}
+
+	env := map[string]string{
+		"PORT":            fmt.Sprintf("%d", opts.Port),
+		"MAP":             opts.Map,
+		"SERVER_PASSWORD": opts.Password,
+		"STEAM_LOGIN":     opts.SteamLogin,
+		"STEAM_PASSWORD":  opts.SteamPass,
+		"STEAM_2FA_CODE":  opts.Steam2FA,
+		"SKIP_UPDATE":     skipUpdate,
+		"DEADWORKS":       deadworksFlag,
+	}
+
+	containerID, err := CreateContainer(containerName, opts.Port, env, volumePath, useOverlay)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create container: %w", err)
+	}
+
+	progress <- "Saving to database..."
+
+	deadworksInt := 0
+	if opts.Deadworks {
+		deadworksInt = 1
+	}
+
+	server := &ServerRow{
+		ID:          id,
+		Name:        opts.Name,
+		Port:        opts.Port,
+		Map:         opts.Map,
+		Password:    opts.Password,
+		SteamLogin:  opts.SteamLogin,
+		SteamPass:   opts.SteamPass,
+		Steam2FA:    opts.Steam2FA,
+		SkipUpdate:  0,
+		Deadworks:   deadworksInt,
+		ContainerID: sql.NullString{String: containerID, Valid: true},
+	}
+
+	if err := InsertServer(server); err != nil {
+		return nil, fmt.Errorf("failed to insert server: %w", err)
+	}
+
+	progress <- "Starting server..."
+
+	if err := StartContainer(containerID); err != nil {
+		return nil, fmt.Errorf("failed to start container: %w", err)
+	}
+
+	progress <- "Server created successfully!"
+
+	return server, nil
+}
+
+// InstallDeadworksWithProgress downloads and extracts Deadworks, reporting progress.
+func InstallDeadworksWithProgress(volumePath string, progress chan<- string) error {
+	deadlockDir := filepath.Join(volumePath, "Deadlock")
+	os.MkdirAll(deadlockDir, 0755)
+
+	zipPath := filepath.Join(volumePath, "deadworks.zip")
+	defer os.Remove(zipPath)
+
+	progress <- "Downloading Deadworks release..."
+	cmd := exec.Command("curl", "-sL", "-o", zipPath, DeadworksReleaseURL)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to download Deadworks: %s: %w", strings.TrimSpace(string(out)), err)
+	}
+
+	progress <- "Extracting Deadworks files..."
+	cmd = exec.Command("unzip", "-o", zipPath, "-d", deadlockDir)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to extract Deadworks: %s: %w", strings.TrimSpace(string(out)), err)
+	}
+
+	progress <- "Setting file permissions..."
+	exec.Command("find", deadlockDir, "!", "-user", "1000", "-exec", "chown", "1000:1000", "{}", ";").Run()
+
 	return nil
 }

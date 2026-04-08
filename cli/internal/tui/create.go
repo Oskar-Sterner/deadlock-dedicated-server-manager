@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/charmbracelet/bubbles/spinner"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -34,19 +35,23 @@ type serverCreateErrMsg struct {
 
 type cancelCreateMsg struct{}
 
+type createProgressMsg string
+
 type CreateModel struct {
-	inputs    []textinput.Model
-	labels    []string
-	focus     int
-	width     int
-	height    int
-	creating  bool
-	errMsg    string
-	deadworks bool
+	inputs       []textinput.Model
+	labels       []string
+	focus        int
+	width        int
+	height       int
+	creating     bool
+	errMsg       string
+	deadworks    bool
+	progressMsg  string
+	progressChan <-chan string
+	spinner      spinner.Model
 }
 
 func NewCreateModel() CreateModel {
-	// Reload config to pick up changes made while the TUI is running
 	ddsm.LoadConfig()
 
 	inputs := make([]textinput.Model, fieldCount)
@@ -72,11 +77,10 @@ func NewCreateModel() CreateModel {
 	nextPort := ddsm.GetNextPort()
 	inputs[fieldPort].Placeholder = fmt.Sprintf("%d (default)", nextPort)
 
-	inputs[fieldMap].SetValue("dl_streets")
+	inputs[fieldMap].SetValue("dl_hideout")
 
 	inputs[fieldPassword].Placeholder = "optional"
 
-	// Deadworks field is a toggle, not a text input — placeholder is informational
 	inputs[fieldDeadworks].Placeholder = "press [enter] to toggle"
 
 	if ddsm.Cfg.SteamLogin != "" {
@@ -96,9 +100,14 @@ func NewCreateModel() CreateModel {
 
 	inputs[fieldSteam2FA].Placeholder = "optional"
 
+	s := spinner.New()
+	s.Spinner = spinner.Dot
+	s.Style = lipgloss.NewStyle().Foreground(Yellow)
+
 	return CreateModel{
-		inputs: inputs,
-		labels: labels,
+		inputs:  inputs,
+		labels:  labels,
+		spinner: s,
 	}
 }
 
@@ -106,7 +115,31 @@ func (m CreateModel) Init() tea.Cmd {
 	return textinput.Blink
 }
 
+func waitForProgress(ch <-chan string) tea.Cmd {
+	return func() tea.Msg {
+		msg, ok := <-ch
+		if !ok {
+			return nil
+		}
+		return createProgressMsg(msg)
+	}
+}
+
 func (m CreateModel) Update(msg tea.Msg) (CreateModel, tea.Cmd) {
+	switch msg := msg.(type) {
+	case createProgressMsg:
+		m.progressMsg = string(msg)
+		return m, waitForProgress(m.progressChan)
+
+	case spinner.TickMsg:
+		if m.creating {
+			var cmd tea.Cmd
+			m.spinner, cmd = m.spinner.Update(msg)
+			return m, cmd
+		}
+		return m, nil
+	}
+
 	if m.creating {
 		return m, nil
 	}
@@ -132,7 +165,6 @@ func (m CreateModel) Update(msg tea.Msg) (CreateModel, tea.Cmd) {
 			return m, textinput.Blink
 
 		case "enter":
-			// Deadworks field: toggle checkbox on enter
 			if m.focus == int(fieldDeadworks) {
 				m.deadworks = !m.deadworks
 				return m, nil
@@ -147,7 +179,6 @@ func (m CreateModel) Update(msg tea.Msg) (CreateModel, tea.Cmd) {
 			return m.validateAndSubmit()
 
 		case " ":
-			// Also allow space to toggle the Deadworks checkbox
 			if m.focus == int(fieldDeadworks) {
 				m.deadworks = !m.deadworks
 				return m, nil
@@ -155,7 +186,6 @@ func (m CreateModel) Update(msg tea.Msg) (CreateModel, tea.Cmd) {
 		}
 	}
 
-	// Don't pass key events to the Deadworks field (it's a toggle, not a text input)
 	if m.focus == int(fieldDeadworks) {
 		return m, nil
 	}
@@ -201,7 +231,7 @@ func (m CreateModel) validateAndSubmit() (CreateModel, tea.Cmd) {
 
 	mapName := strings.TrimSpace(m.inputs[fieldMap].Value())
 	if mapName == "" {
-		mapName = "dl_streets"
+		mapName = "dl_hideout"
 	}
 
 	password := strings.TrimSpace(m.inputs[fieldPassword].Value())
@@ -209,8 +239,13 @@ func (m CreateModel) validateAndSubmit() (CreateModel, tea.Cmd) {
 	deadworks := m.deadworks
 
 	m.creating = true
-	return m, func() tea.Msg {
-		server, err := ddsm.CreateServer(ddsm.ServerCreateOpts{
+	m.progressMsg = "Initializing..."
+
+	progressCh := make(chan string, 8)
+	m.progressChan = progressCh
+
+	createCmd := func() tea.Msg {
+		server, err := ddsm.CreateServerWithProgress(ddsm.ServerCreateOpts{
 			Name:       name,
 			Port:       port,
 			Map:        mapName,
@@ -219,12 +254,14 @@ func (m CreateModel) validateAndSubmit() (CreateModel, tea.Cmd) {
 			SteamPass:  steamPass,
 			Steam2FA:   steam2FA,
 			Deadworks:  deadworks,
-		})
+		}, progressCh)
 		if err != nil {
 			return serverCreateErrMsg{err: err}
 		}
 		return serverCreatedMsg{server: server}
 	}
+
+	return m, tea.Batch(createCmd, waitForProgress(progressCh), m.spinner.Tick)
 }
 
 func (m CreateModel) View() string {
@@ -246,7 +283,6 @@ func (m CreateModel) View() string {
 
 		label := ls.Render(m.labels[i] + ":")
 
-		// Render Deadworks field as a checkbox instead of a text input
 		if i == int(fieldDeadworks) {
 			checkbox := "[ ]"
 			desc := lipgloss.NewStyle().Foreground(Gray).Render("  Install Deadworks mod framework")
@@ -269,11 +305,7 @@ func (m CreateModel) View() string {
 	}
 
 	if m.creating {
-		msg := "Creating server..."
-		if m.deadworks {
-			msg = "Creating server & installing Deadworks..."
-		}
-		b.WriteString("\n  " + lipgloss.NewStyle().Foreground(Yellow).Bold(true).Render(msg) + "\n")
+		b.WriteString("\n  " + m.spinner.View() + " " + lipgloss.NewStyle().Foreground(Yellow).Bold(true).Render(m.progressMsg) + "\n")
 	}
 
 	if m.errMsg != "" {

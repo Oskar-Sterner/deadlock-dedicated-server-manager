@@ -142,9 +142,10 @@ func (m ServersModel) Update(msg tea.Msg) (ServersModel, tea.Cmd) {
 		case key.Matches(msg, key.NewBinding(key.WithKeys("enter"))):
 			if m.cursor < len(m.servers) {
 				m.viewing = true
-				m.serverView = NewServerViewModel(m.servers[m.cursor].ID)
+				var cmd tea.Cmd
+				m.serverView, cmd = NewServerViewModel(m.servers[m.cursor].ID)
 				m.serverView.SetSize(m.width, m.height)
-				return m, m.serverView.Init()
+				return m, cmd
 			}
 		}
 	}
