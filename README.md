@@ -67,9 +67,9 @@ ddsm --help
 | `ddsm`               | Launch interactive TUI               |
 | `ddsm status`        | List all servers with status         |
 | `ddsm create`        | Create a new server (interactive)    |
-| `ddsm start [id|all]`| Start server(s)                      |
-| `ddsm stop [id|all]` | Stop server(s)                       |
-| `ddsm restart [id|all]` | Restart server(s)                 |
+| `ddsm start [id\|all]`| Start server(s)                      |
+| `ddsm stop [id\|all]` | Stop server(s)                       |
+| `ddsm restart [id\|all]` | Restart server(s)                 |
 | `ddsm delete [id]`   | Delete a server                      |
 | `ddsm logs [id]`     | Tail live server logs                |
 | `ddsm rcon [id] [cmd]` | Execute RCON command               |
