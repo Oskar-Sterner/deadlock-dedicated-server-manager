@@ -104,7 +104,7 @@ func GetContainerStats(containerID string) (*ContainerStats, error) {
 	}, nil
 }
 
-func CreateContainer(name string, port int, env map[string]string, volumePath string) (string, error) {
+func CreateContainer(name string, port int, env map[string]string, volumePath string, useOverlay bool) (string, error) {
 	ctx := context.Background()
 
 	envSlice := make([]string, 0, len(env)+4)
@@ -122,15 +122,28 @@ func CreateContainer(name string, port int, env map[string]string, volumePath st
 	portTCP := nat.Port(portStr + "/tcp")
 	portUDP := nat.Port(portStr + "/udp")
 
-	resp, err := DockerClient().ContainerCreate(ctx,
-		&container.Config{
-			Image: Cfg.DockerImage,
-			Env:   envSlice,
-			ExposedPorts: nat.PortSet{
-				portTCP: struct{}{},
-				portUDP: struct{}{},
-			},
+	cfg := &container.Config{
+		Image: Cfg.DockerImage,
+		Env:   envSlice,
+		ExposedPorts: nat.PortSet{
+			portTCP: struct{}{},
+			portUDP: struct{}{},
 		},
+	}
+
+	// For overlay servers, skip the destructive chown -R in the entrypoint.
+	// The base files are already owned by steam:steam and chown -R triggers
+	// a full copy-up on overlayfs, duplicating the entire 34GB game install.
+	if useOverlay {
+		cfg.Entrypoint = []string{"/bin/bash", "-c",
+			"rm -f /tmp/.X99-lock /tmp/.X11-unix/X99 && " +
+				"Xvfb :99 -screen 0 1024x768x16 & sleep 1 && " +
+				"chmod a+x /app/start.sh && " +
+				"exec gosu steam /app/start.sh"}
+	}
+
+	resp, err := DockerClient().ContainerCreate(ctx,
+		cfg,
 		&container.HostConfig{
 			Binds: []string{
 				fmt.Sprintf("%s:/app", volumePath),

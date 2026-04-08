@@ -117,9 +117,10 @@ func CreateServer(opts ServerCreateOpts) (*ServerRow, error) {
 		}
 	}
 
-	// Write embedded start.sh to the volume
+	// Write embedded start.sh to the volume (owned by steam for overlay compat)
 	dest := filepath.Join(volumePath, "start.sh")
 	os.WriteFile(dest, []byte(defaultStartScript), 0755)
+	os.Chown(dest, 1000, 1000)
 
 	containerName := fmt.Sprintf("deadlock-%s", id[:8])
 	skipUpdate := "0"
@@ -136,7 +137,7 @@ func CreateServer(opts ServerCreateOpts) (*ServerRow, error) {
 		"SKIP_UPDATE":     skipUpdate,
 	}
 
-	containerID, err := CreateContainer(containerName, opts.Port, env, volumePath)
+	containerID, err := CreateContainer(containerName, opts.Port, env, volumePath, useOverlay)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create container: %w", err)
 	}
