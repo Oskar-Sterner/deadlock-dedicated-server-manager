@@ -59,6 +59,14 @@ func (m ServerViewModel) Update(msg tea.Msg) (ServerViewModel, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
+		case "q":
+			// If console input is focused, let it type 'q'
+			if m.activeTab == ServerTabConsole && m.console.inputFocus {
+				break
+			}
+			m.console.Detach()
+			return m, func() tea.Msg { return exitServerViewMsg{} }
+
 		case "esc":
 			// Console tab: if input focused, unfocus first; otherwise exit
 			if m.activeTab == ServerTabConsole && m.console.inputFocus {
