@@ -61,6 +61,8 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyMsg:
+		inputActive := m.activeTab == TabServers && m.servers.creating
+
 		switch msg.String() {
 		case "ctrl+c":
 			m.quitting = true
@@ -70,19 +72,34 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if m.activeTab == TabConsole && m.console.inputFocus {
 				break
 			}
+			if inputActive {
+				break
+			}
 			m.quitting = true
 			m.console.Detach()
 			return m, tea.Quit
 		case "tab":
+			if inputActive {
+				break
+			}
 			m.activeTab = Tab((int(m.activeTab) + 1) % len(tabNames))
 			return m, nil
 		case "shift+tab":
+			if inputActive {
+				break
+			}
 			m.activeTab = Tab((int(m.activeTab) - 1 + len(tabNames)) % len(tabNames))
 			return m, nil
 		case "right":
+			if inputActive {
+				break
+			}
 			m.activeTab = Tab((int(m.activeTab) + 1) % len(tabNames))
 			return m, nil
 		case "left":
+			if inputActive {
+				break
+			}
 			m.activeTab = Tab((int(m.activeTab) - 1 + len(tabNames)) % len(tabNames))
 			return m, nil
 		}

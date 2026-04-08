@@ -21,11 +21,13 @@ type switchToConsoleMsg struct {
 }
 
 type ServersModel struct {
-	servers []*ddsm.ServerStatus
-	cursor  int
-	width   int
-	height  int
-	message string
+	servers  []*ddsm.ServerStatus
+	cursor   int
+	width    int
+	height   int
+	message  string
+	creating bool
+	create   CreateModel
 }
 
 func NewServersModel() ServersModel {
@@ -50,6 +52,30 @@ func tickRefresh() tea.Cmd {
 }
 
 func (m ServersModel) Update(msg tea.Msg) (ServersModel, tea.Cmd) {
+	// Handle create result messages regardless of mode
+	switch msg.(type) {
+	case cancelCreateMsg:
+		m.creating = false
+		return m, refreshServers()
+	case serverCreatedMsg:
+		created := msg.(serverCreatedMsg)
+		m.creating = false
+		m.message = fmt.Sprintf("Server '%s' created (port %d)", created.server.Name, created.server.Port)
+		return m, refreshServers()
+	case serverCreateErrMsg:
+		errMsg := msg.(serverCreateErrMsg)
+		m.create.errMsg = fmt.Sprintf("Error: %v", errMsg.err)
+		m.create.creating = false
+		return m, nil
+	}
+
+	// Delegate to create model when in create mode
+	if m.creating {
+		var cmd tea.Cmd
+		m.create, cmd = m.create.Update(msg)
+		return m, cmd
+	}
+
 	switch msg := msg.(type) {
 	case serversRefreshMsg:
 		m.servers = msg
@@ -67,6 +93,11 @@ func (m ServersModel) Update(msg tea.Msg) (ServersModel, tea.Cmd) {
 
 	case tea.KeyMsg:
 		switch {
+		case key.Matches(msg, key.NewBinding(key.WithKeys("c"))):
+			m.creating = true
+			m.create = NewCreateModel()
+			m.create.SetSize(m.width, m.height)
+			return m, m.create.Init()
 		case key.Matches(msg, key.NewBinding(key.WithKeys("down"))):
 			if m.cursor < len(m.servers)-1 {
 				m.cursor++
@@ -122,8 +153,12 @@ func serverAction(id, action string) tea.Cmd {
 }
 
 func (m ServersModel) View() string {
+	if m.creating {
+		return m.create.View()
+	}
+
 	if len(m.servers) == 0 {
-		return "\n  No servers configured. Run 'ddsm create' to add one.\n"
+		return "\n  No servers configured. Press 'c' to create one.\n"
 	}
 
 	var b strings.Builder
@@ -187,7 +222,7 @@ func (m ServersModel) View() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(HelpStyle.Render("  s start  x stop  r restart  w wake  enter console"))
+	b.WriteString(HelpStyle.Render("  c create  s start  x stop  r restart  w wake  enter console"))
 	b.WriteString("\n")
 
 	return b.String()
