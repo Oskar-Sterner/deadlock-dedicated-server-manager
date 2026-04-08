@@ -207,7 +207,7 @@ func (m ConsoleModel) View() string {
 	if !m.autoScroll {
 		scrollIndicator = "OFF"
 	}
-	b.WriteString(HelpStyle.Render(fmt.Sprintf("  esc toggle focus  a auto-scroll (%s)  enter send command", scrollIndicator)))
+	b.WriteString(HelpStyle.Render(fmt.Sprintf("  [esc] toggle focus  [a] auto-scroll (%s)  [enter] send command", scrollIndicator)))
 
 	return b.String()
 }

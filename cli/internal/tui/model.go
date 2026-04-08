@@ -167,7 +167,7 @@ func (m Model) View() string {
 	}
 
 	// Status bar
-	statusBar := StatusBarStyle.Width(m.width).Render("DDSM v0.1.0  |  arrows/tab: switch tabs  |  q: quit")
+	statusBar := StatusBarStyle.Width(m.width).Render("DDSM v0.1.0  |  [arrows/tab] switch tabs  |  [q] quit")
 	b.WriteString("\n")
 	b.WriteString(statusBar)
 

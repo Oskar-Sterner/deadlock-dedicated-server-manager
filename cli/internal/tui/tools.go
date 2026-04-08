@@ -150,7 +150,7 @@ func (m ToolsModel) View() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(HelpStyle.Render("  enter select  up/down navigate"))
+	b.WriteString(HelpStyle.Render("  [enter] select  [up/down] navigate"))
 	b.WriteString("\n")
 
 	return b.String()

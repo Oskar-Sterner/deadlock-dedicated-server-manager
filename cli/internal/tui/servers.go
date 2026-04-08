@@ -222,7 +222,7 @@ func (m ServersModel) View() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(HelpStyle.Render("  c create  s start  x stop  r restart  w wake  enter console"))
+	b.WriteString(HelpStyle.Render("  [c] create  [s] start  [x] stop  [r] restart  [w] wake  [enter] view server"))
 	b.WriteString("\n")
 
 	return b.String()

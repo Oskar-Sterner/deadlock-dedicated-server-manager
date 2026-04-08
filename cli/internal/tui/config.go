@@ -104,7 +104,7 @@ func (m ConfigModel) View() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(HelpStyle.Render("  e edit config file"))
+	b.WriteString(HelpStyle.Render("  [e] edit config file"))
 	b.WriteString("\n")
 
 	return b.String()

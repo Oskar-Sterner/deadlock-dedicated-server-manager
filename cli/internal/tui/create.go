@@ -237,7 +237,7 @@ func (m CreateModel) View() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(HelpStyle.Render("  tab/\u2191\u2193 navigate  enter next/submit  esc cancel"))
+	b.WriteString(HelpStyle.Render("  [tab/\u2191\u2193] navigate  [enter] next/submit  [esc] cancel"))
 	b.WriteString("\n")
 
 	return b.String()
