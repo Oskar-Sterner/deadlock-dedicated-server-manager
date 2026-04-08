@@ -82,14 +82,14 @@ func (m ServerViewModel) Update(msg tea.Msg) (ServerViewModel, tea.Cmd) {
 			m.console.Detach()
 			return m, func() tea.Msg { return exitServerViewMsg{} }
 
-		case "tab":
+		case "tab", "right":
 			if m.activeTab == ServerTabConsole && m.console.inputFocus {
 				break // let console handle it
 			}
 			m.activeTab = ServerTab((int(m.activeTab) + 1) % len(serverTabNames))
 			return m, nil
 
-		case "shift+tab":
+		case "shift+tab", "left":
 			if m.activeTab == ServerTabConsole && m.console.inputFocus {
 				break
 			}
