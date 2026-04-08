@@ -11,6 +11,12 @@ import (
 	"github.com/Oskar-Sterner/deadlock-dedicated-server-manager/cli/internal/ddsm"
 )
 
+// NotificationMsg is sent by background systems (autosleep, etc.) via p.Send()
+// to display messages inside the TUI instead of writing to stdout.
+type NotificationMsg struct {
+	Text string
+}
+
 type serversRefreshMsg []*ddsm.ServerStatus
 type tickMsg struct{}
 type serverActionDoneMsg struct {
@@ -68,6 +74,9 @@ func (m ServersModel) Update(msg tea.Msg) (ServersModel, tea.Cmd) {
 	case exitServerViewMsg:
 		m.viewing = false
 		return m, refreshServers()
+	case NotificationMsg:
+		m.message = msg.(NotificationMsg).Text
+		return m, nil
 	}
 
 	// Delegate to create model when in create mode
@@ -233,7 +242,7 @@ func (m ServersModel) View() string {
 	}
 
 	if m.message != "" {
-		b.WriteString("\n  " + m.message + "\n")
+		b.WriteString("\n  " + lipgloss.NewStyle().Foreground(Amber).Render(m.message) + "\n")
 	}
 
 	b.WriteString("\n")

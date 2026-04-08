@@ -24,6 +24,7 @@ type ServerRow struct {
 	SteamPass   string
 	Steam2FA    string
 	SkipUpdate  int
+	Deadworks   int
 	ContainerID sql.NullString
 	CreatedAt   string
 }
@@ -61,10 +62,14 @@ func migrate() {
 			steam_pass TEXT NOT NULL,
 			steam_2fa TEXT NOT NULL DEFAULT '',
 			skip_update INTEGER NOT NULL DEFAULT 1,
+			deadworks INTEGER NOT NULL DEFAULT 0,
 			container_id TEXT,
 			created_at TEXT NOT NULL DEFAULT (datetime('now'))
 		);
 	`)
+
+	// Add deadworks column to existing databases
+	db.Exec(`ALTER TABLE servers ADD COLUMN deadworks INTEGER NOT NULL DEFAULT 0`)
 }
 
 func GetSetting(key string) string {
@@ -81,7 +86,7 @@ func SetSetting(key, value string) {
 }
 
 func ListServers() ([]ServerRow, error) {
-	rows, err := GetDB().Query("SELECT id, name, port, [map], password, steam_login, steam_pass, steam_2fa, skip_update, container_id, created_at FROM servers ORDER BY created_at DESC")
+	rows, err := GetDB().Query("SELECT id, name, port, [map], password, steam_login, steam_pass, steam_2fa, skip_update, deadworks, container_id, created_at FROM servers ORDER BY created_at DESC")
 	if err != nil {
 		return nil, err
 	}
@@ -90,7 +95,7 @@ func ListServers() ([]ServerRow, error) {
 	var servers []ServerRow
 	for rows.Next() {
 		var s ServerRow
-		if err := rows.Scan(&s.ID, &s.Name, &s.Port, &s.Map, &s.Password, &s.SteamLogin, &s.SteamPass, &s.Steam2FA, &s.SkipUpdate, &s.ContainerID, &s.CreatedAt); err != nil {
+		if err := rows.Scan(&s.ID, &s.Name, &s.Port, &s.Map, &s.Password, &s.SteamLogin, &s.SteamPass, &s.Steam2FA, &s.SkipUpdate, &s.Deadworks, &s.ContainerID, &s.CreatedAt); err != nil {
 			return nil, err
 		}
 		servers = append(servers, s)
@@ -100,8 +105,8 @@ func ListServers() ([]ServerRow, error) {
 
 func GetServer(id string) (*ServerRow, error) {
 	var s ServerRow
-	err := GetDB().QueryRow("SELECT id, name, port, [map], password, steam_login, steam_pass, steam_2fa, skip_update, container_id, created_at FROM servers WHERE id = ?", id).
-		Scan(&s.ID, &s.Name, &s.Port, &s.Map, &s.Password, &s.SteamLogin, &s.SteamPass, &s.Steam2FA, &s.SkipUpdate, &s.ContainerID, &s.CreatedAt)
+	err := GetDB().QueryRow("SELECT id, name, port, [map], password, steam_login, steam_pass, steam_2fa, skip_update, deadworks, container_id, created_at FROM servers WHERE id = ?", id).
+		Scan(&s.ID, &s.Name, &s.Port, &s.Map, &s.Password, &s.SteamLogin, &s.SteamPass, &s.Steam2FA, &s.SkipUpdate, &s.Deadworks, &s.ContainerID, &s.CreatedAt)
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
@@ -122,9 +127,9 @@ func GetNextPort() int {
 
 func InsertServer(s *ServerRow) error {
 	_, err := GetDB().Exec(`
-		INSERT INTO servers (id, name, port, [map], password, steam_login, steam_pass, steam_2fa, skip_update, container_id)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		s.ID, s.Name, s.Port, s.Map, s.Password, s.SteamLogin, s.SteamPass, s.Steam2FA, s.SkipUpdate, s.ContainerID)
+		INSERT INTO servers (id, name, port, [map], password, steam_login, steam_pass, steam_2fa, skip_update, deadworks, container_id)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		s.ID, s.Name, s.Port, s.Map, s.Password, s.SteamLogin, s.SteamPass, s.Steam2FA, s.SkipUpdate, s.Deadworks, s.ContainerID)
 	return err
 }
 

@@ -36,10 +36,16 @@ ARGS="${ARGS} +rcon_password ddsm_rcon_secret"
 
 ARGS="-dedicated -usercon -ip 0.0.0.0 -convars_visible_by_default -allow_no_lobby_connect -novid ${ARGS}"
 
+# Headless rendering optimizations — force minimum resolution and cap
+# render FPS to reduce CPU load from the Proton/DXVK rendering pipeline.
+# Server tick rate is independent of render FPS.
+ARGS="${ARGS} -width 640 -height 480 -nojoy +fps_max 30"
+
 # --- Validate game directory ---
 
 DEADLOCK_DIR=/app/Deadlock
 DEADLOCK_EXE="${DEADLOCK_DIR}/game/bin/win64/deadlock.exe"
+DEADWORKS_EXE="${DEADLOCK_DIR}/game/bin/win64/deadworks.exe"
 
 mkdir -p "${DEADLOCK_DIR}"
 DIR_PERM=$(stat -c "%u:%g:%a" "${DEADLOCK_DIR}")
@@ -71,12 +77,25 @@ if [ ! -f "${DEADLOCK_EXE}" ]; then
     die
 fi
 
+# --- Select server executable ---
+
+SERVER_EXE="${DEADLOCK_EXE}"
+if [ "${DEADWORKS}" = "1" ] && [ -f "${DEADWORKS_EXE}" ]; then
+    echo "Deadworks enabled — launching via deadworks.exe"
+    SERVER_EXE="${DEADWORKS_EXE}"
+elif [ "${DEADWORKS}" = "1" ]; then
+    echo "WARNING: DEADWORKS=1 but deadworks.exe not found, falling back to deadlock.exe"
+fi
+
 # --- Launch server ---
 
-CMD="${PROTON} run ${DEADLOCK_EXE} ${ARGS}"
-echo "Starting Deadlock server: ${CMD}"
+CMD="${PROTON} run ${SERVER_EXE} ${ARGS}"
+echo "Starting server: ${CMD}"
 exec ${CMD}
 `
+
+// DeadworksReleaseURL is the download URL for the latest Deadworks release artifact.
+const DeadworksReleaseURL = "https://github.com/Deadworks-net/deadworks/releases/download/v0.4.0/deadworks-v0.4.0.zip"
 
 type ServerCreateOpts struct {
 	Name       string
@@ -86,6 +105,7 @@ type ServerCreateOpts struct {
 	SteamLogin string
 	SteamPass  string
 	Steam2FA   string
+	Deadworks  bool
 }
 
 type ServerStatus struct {
@@ -95,6 +115,33 @@ type ServerStatus struct {
 	Stats      *ContainerStats
 	Players    int
 	MaxPlayers int
+}
+
+// InstallDeadworks downloads and extracts the Deadworks framework into a server volume.
+// The zip contains a game/ directory that overlays directly onto the Deadlock game directory.
+func InstallDeadworks(volumePath string) error {
+	deadlockDir := filepath.Join(volumePath, "Deadlock")
+	os.MkdirAll(deadlockDir, 0755)
+
+	zipPath := filepath.Join(volumePath, "deadworks.zip")
+	defer os.Remove(zipPath)
+
+	// Download release zip
+	cmd := exec.Command("curl", "-sL", "-o", zipPath, DeadworksReleaseURL)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to download Deadworks: %s: %w", strings.TrimSpace(string(out)), err)
+	}
+
+	// Extract into Deadlock directory (zip contains game/ folder)
+	cmd = exec.Command("unzip", "-o", zipPath, "-d", deadlockDir)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		return fmt.Errorf("failed to extract Deadworks: %s: %w", strings.TrimSpace(string(out)), err)
+	}
+
+	// Fix ownership for steam user (uid 1000)
+	exec.Command("chown", "-R", "1000:1000", deadlockDir).Run()
+
+	return nil
 }
 
 func CreateServer(opts ServerCreateOpts) (*ServerRow, error) {
@@ -122,11 +169,24 @@ func CreateServer(opts ServerCreateOpts) (*ServerRow, error) {
 	os.WriteFile(dest, []byte(defaultStartScript), 0755)
 	os.Chown(dest, 1000, 1000)
 
+	// Install Deadworks if requested
+	if opts.Deadworks {
+		if err := InstallDeadworks(volumePath); err != nil {
+			return nil, fmt.Errorf("failed to install Deadworks: %w", err)
+		}
+	}
+
 	containerName := fmt.Sprintf("deadlock-%s", id[:8])
 	skipUpdate := "0"
 	if useOverlay {
 		skipUpdate = "1"
 	}
+
+	deadworksFlag := "0"
+	if opts.Deadworks {
+		deadworksFlag = "1"
+	}
+
 	env := map[string]string{
 		"PORT":            fmt.Sprintf("%d", opts.Port),
 		"MAP":             opts.Map,
@@ -135,11 +195,17 @@ func CreateServer(opts ServerCreateOpts) (*ServerRow, error) {
 		"STEAM_PASSWORD":  opts.SteamPass,
 		"STEAM_2FA_CODE":  opts.Steam2FA,
 		"SKIP_UPDATE":     skipUpdate,
+		"DEADWORKS":       deadworksFlag,
 	}
 
 	containerID, err := CreateContainer(containerName, opts.Port, env, volumePath, useOverlay)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create container: %w", err)
+	}
+
+	deadworksInt := 0
+	if opts.Deadworks {
+		deadworksInt = 1
 	}
 
 	server := &ServerRow{
@@ -152,6 +218,7 @@ func CreateServer(opts ServerCreateOpts) (*ServerRow, error) {
 		SteamPass:   opts.SteamPass,
 		Steam2FA:    opts.Steam2FA,
 		SkipUpdate:  0,
+		Deadworks:   deadworksInt,
 		ContainerID: sql.NullString{String: containerID, Valid: true},
 	}
 

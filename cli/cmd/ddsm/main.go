@@ -44,11 +44,21 @@ func main() {
 
 	if len(os.Args) < 2 {
 		ddsm.MountAllOverlays()
-		ddsm.StartAutoSleep()
-		defer ddsm.StopAutoSleep()
 		defer ddsm.CloseDB()
 
 		p := tea.NewProgram(tui.NewModel(), tea.WithAltScreen())
+
+		// Route autosleep messages through bubbletea so they render
+		// inside the TUI instead of corrupting the alt-screen display.
+		// Use a goroutine because p.Send() blocks on an unbuffered
+		// channel until p.Run() starts the event loop.
+		ddsm.SetNotifier(func(msg string) {
+			go p.Send(tui.NotificationMsg{Text: msg})
+		})
+
+		ddsm.StartAutoSleep()
+		defer ddsm.StopAutoSleep()
+
 		if _, err := p.Run(); err != nil {
 			fmt.Fprintf(os.Stderr, "TUI error: %v\n", err)
 			os.Exit(1)

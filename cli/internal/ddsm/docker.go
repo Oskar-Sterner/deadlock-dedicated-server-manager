@@ -112,7 +112,7 @@ func CreateContainer(name string, port int, env map[string]string, volumePath st
 		envSlice = append(envSlice, fmt.Sprintf("%s=%s", k, v))
 	}
 	envSlice = append(envSlice,
-		"PROTON_LOG=1",
+		"PROTON_LOG=0",
 		"PROTON_NO_WRITE_WATCH=1",
 		"WINEDLLOVERRIDES=winedbg.exe=d",
 		"DISPLAY=:99",
@@ -137,7 +137,7 @@ func CreateContainer(name string, port int, env map[string]string, volumePath st
 	if useOverlay {
 		cfg.Entrypoint = []string{"/bin/bash", "-c",
 			"rm -f /tmp/.X99-lock /tmp/.X11-unix/X99 && " +
-				"Xvfb :99 -screen 0 1024x768x16 & sleep 1 && " +
+				"Xvfb :99 -screen 0 640x480x8 -nolisten tcp -nolisten unix +extension GLX & sleep 1 && " +
 				"chmod a+x /app/start.sh && " +
 				"exec gosu steam /app/start.sh"}
 	}

@@ -56,6 +56,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.tools.SetSize(msg.Width, contentHeight)
 		return m, nil
 
+	case NotificationMsg:
+		// Always route notifications to the servers tab regardless of active tab
+		var cmd tea.Cmd
+		m.servers, cmd = m.servers.Update(msg)
+		return m, cmd
+
 	case tea.KeyMsg:
 		inputActive := m.activeTab == TabServers && (m.servers.creating || m.servers.viewing)
 

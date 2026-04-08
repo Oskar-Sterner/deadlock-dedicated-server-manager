@@ -21,7 +21,28 @@ var (
 	sleepStates   = make(map[string]*sleepState)
 	sleepStatesMu sync.Mutex
 	sleepCancel   context.CancelFunc
+	notifyFn      func(string)
+	notifyMu      sync.RWMutex
 )
+
+// SetNotifier sets a function that receives autosleep log messages.
+// When running inside the TUI, this routes messages through bubbletea
+// instead of writing directly to stdout (which corrupts the display).
+func SetNotifier(fn func(string)) {
+	notifyMu.Lock()
+	defer notifyMu.Unlock()
+	notifyFn = fn
+}
+
+func notify(format string, args ...interface{}) {
+	msg := fmt.Sprintf(format, args...)
+	notifyMu.RLock()
+	fn := notifyFn
+	notifyMu.RUnlock()
+	if fn != nil {
+		fn(msg)
+	}
+}
 
 func getSleepState(serverID string) *sleepState {
 	sleepStatesMu.Lock()
@@ -59,7 +80,7 @@ func StartAutoSleep() {
 	interval := time.Duration(Cfg.AutoSleep.PollInterval) * time.Second
 	idleTimeout := time.Duration(Cfg.AutoSleep.IdleTimeout) * time.Second
 
-	fmt.Printf("[autosleep] Started — polling every %ds, idle timeout %ds\n", Cfg.AutoSleep.PollInterval, Cfg.AutoSleep.IdleTimeout)
+	notify("[autosleep] Started — polling every %ds, idle timeout %ds", Cfg.AutoSleep.PollInterval, Cfg.AutoSleep.IdleTimeout)
 
 	go func() {
 		ticker := time.NewTicker(interval)
@@ -126,9 +147,9 @@ func pollServers(idleTimeout time.Duration) {
 			if s.emptyTimestamp == nil {
 				now := time.Now()
 				s.emptyTimestamp = &now
-				fmt.Printf("[autosleep] %s (port %d): empty, starting idle timer\n", server.Name, server.Port)
+				notify("[autosleep] %s (port %d): empty, starting idle timer", server.Name, server.Port)
 			} else if time.Since(*s.emptyTimestamp) >= idleTimeout {
-				fmt.Printf("[autosleep] %s (port %d): idle for %ds, sleeping\n", server.Name, server.Port, int(idleTimeout.Seconds()))
+				notify("[autosleep] %s (port %d): idle for %ds, sleeping", server.Name, server.Port, int(idleTimeout.Seconds()))
 				s.mu.Unlock()
 				sleepServer(server.ID, server.Port, server.ContainerID.String)
 				continue
@@ -141,7 +162,7 @@ func pollServers(idleTimeout time.Duration) {
 
 func sleepServer(serverID string, port int, containerID string) {
 	if err := StopContainer(containerID); err != nil {
-		fmt.Printf("[autosleep] Failed to stop container: %v\n", err)
+		notify("[autosleep] Failed to stop container: %v", err)
 		return
 	}
 
@@ -162,7 +183,7 @@ func startWakeListener(serverID string, port int, containerID string) {
 
 	tcpListener, err := net.Listen("tcp", addr)
 	if err != nil {
-		fmt.Printf("[autosleep] Port %d TCP in use, retrying in 5s\n", port)
+		notify("[autosleep] Port %d TCP in use, retrying in 5s", port)
 		time.AfterFunc(5*time.Second, func() {
 			startWakeListener(serverID, port, containerID)
 		})
@@ -173,7 +194,7 @@ func startWakeListener(serverID string, port int, containerID string) {
 	udpConn, err := net.ListenUDP("udp", udpAddr)
 	if err != nil {
 		tcpListener.Close()
-		fmt.Printf("[autosleep] Port %d UDP in use, retrying in 5s\n", port)
+		notify("[autosleep] Port %d UDP in use, retrying in 5s", port)
 		time.AfterFunc(5*time.Second, func() {
 			startWakeListener(serverID, port, containerID)
 		})
@@ -185,7 +206,7 @@ func startWakeListener(serverID string, port int, containerID string) {
 	s.udpConn = udpConn
 	s.mu.Unlock()
 
-	fmt.Printf("[autosleep] Wake listener on port %d (TCP+UDP)\n", port)
+	notify("[autosleep] Wake listener on port %d (TCP+UDP)", port)
 
 	go func() {
 		for {
@@ -194,7 +215,7 @@ func startWakeListener(serverID string, port int, containerID string) {
 				return
 			}
 			conn.Close()
-			fmt.Printf("[autosleep] TCP connection on port %d — waking server %s\n", port, serverID)
+			notify("[autosleep] TCP connection on port %d — waking server", port)
 			wakeServer(serverID, port, containerID)
 			return
 		}
@@ -207,7 +228,7 @@ func startWakeListener(serverID string, port int, containerID string) {
 			if err != nil {
 				return
 			}
-			fmt.Printf("[autosleep] UDP packet on port %d — waking server %s\n", port, serverID)
+			notify("[autosleep] UDP packet on port %d — waking server", port)
 			wakeServer(serverID, port, containerID)
 			return
 		}
@@ -225,20 +246,20 @@ func wakeServer(serverID string, port int, containerID string) {
 	closeListeners(s)
 	s.mu.Unlock()
 
-	fmt.Printf("[autosleep] Waking server %s on port %d\n", serverID, port)
+	notify("[autosleep] Waking server on port %d", port)
 
 	time.Sleep(1 * time.Second)
 
 	if UsesOverlay(serverID) {
 		if err := MountOverlay(serverID); err != nil {
-			fmt.Printf("[autosleep] Failed to mount overlay for %s: %v\n", serverID, err)
+			notify("[autosleep] Failed to mount overlay: %v", err)
 		}
 	}
 
 	if err := StartContainer(containerID); err != nil {
-		fmt.Printf("[autosleep] Failed to start container: %v\n", err)
+		notify("[autosleep] Failed to start container: %v", err)
 	} else {
-		fmt.Printf("[autosleep] Server %s started\n", serverID)
+		notify("[autosleep] Server started on port %d", port)
 	}
 
 	s.mu.Lock()
