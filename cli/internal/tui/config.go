@@ -57,6 +57,9 @@ func openEditor() tea.Cmd {
 }
 
 func (m ConfigModel) View() string {
+	// Reload config to pick up changes made while the TUI is running
+	ddsm.LoadConfig()
+
 	var b strings.Builder
 
 	b.WriteString(TitleStyle.Render("  Configuration"))

@@ -44,6 +44,9 @@ type CreateModel struct {
 }
 
 func NewCreateModel() CreateModel {
+	// Reload config to pick up changes made while the TUI is running
+	ddsm.LoadConfig()
+
 	inputs := make([]textinput.Model, fieldCount)
 	labels := []string{
 		"Server name",
