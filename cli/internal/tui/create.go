@@ -70,9 +70,19 @@ func NewCreateModel() CreateModel {
 
 	inputs[fieldPassword].Placeholder = "optional"
 
-	inputs[fieldSteamLogin].Placeholder = "required"
+	if ddsm.Cfg.SteamLogin != "" {
+		inputs[fieldSteamLogin].SetValue(ddsm.Cfg.SteamLogin)
+		inputs[fieldSteamLogin].Placeholder = "from config"
+	} else {
+		inputs[fieldSteamLogin].Placeholder = "required"
+	}
 
-	inputs[fieldSteamPass].Placeholder = "required"
+	if ddsm.Cfg.SteamPassword != "" {
+		inputs[fieldSteamPass].SetValue(ddsm.Cfg.SteamPassword)
+		inputs[fieldSteamPass].Placeholder = "from config"
+	} else {
+		inputs[fieldSteamPass].Placeholder = "required"
+	}
 	inputs[fieldSteamPass].EchoMode = textinput.EchoPassword
 
 	inputs[fieldSteam2FA].Placeholder = "optional"

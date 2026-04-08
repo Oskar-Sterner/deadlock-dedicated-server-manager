@@ -173,17 +173,33 @@ func cmdCreate() {
 	password, _ := reader.ReadString('\n')
 	password = strings.TrimSpace(password)
 
-	fmt.Print("Steam login: ")
+	defaultLogin := ddsm.Cfg.SteamLogin
+	if defaultLogin != "" {
+		fmt.Printf("Steam login [%s]: ", defaultLogin)
+	} else {
+		fmt.Print("Steam login: ")
+	}
 	steamLogin, _ := reader.ReadString('\n')
 	steamLogin = strings.TrimSpace(steamLogin)
+	if steamLogin == "" {
+		steamLogin = defaultLogin
+	}
 	if steamLogin == "" {
 		fmt.Fprintln(os.Stderr, "Steam login is required")
 		os.Exit(1)
 	}
 
-	fmt.Print("Steam password: ")
+	defaultPass := ddsm.Cfg.SteamPassword
+	if defaultPass != "" {
+		fmt.Printf("Steam password [%s]: ", strings.Repeat("*", len(defaultPass)))
+	} else {
+		fmt.Print("Steam password: ")
+	}
 	steamPass, _ := reader.ReadString('\n')
 	steamPass = strings.TrimSpace(steamPass)
+	if steamPass == "" {
+		steamPass = defaultPass
+	}
 	if steamPass == "" {
 		fmt.Fprintln(os.Stderr, "Steam password is required")
 		os.Exit(1)
@@ -367,17 +383,33 @@ func cmdUpdateBase() {
 
 	reader := bufio.NewReader(os.Stdin)
 
-	fmt.Print("Steam login: ")
+	defaultLogin := ddsm.Cfg.SteamLogin
+	if defaultLogin != "" {
+		fmt.Printf("Steam login [%s]: ", defaultLogin)
+	} else {
+		fmt.Print("Steam login: ")
+	}
 	steamLogin, _ := reader.ReadString('\n')
 	steamLogin = strings.TrimSpace(steamLogin)
+	if steamLogin == "" {
+		steamLogin = defaultLogin
+	}
 	if steamLogin == "" {
 		fmt.Fprintln(os.Stderr, "Steam login is required")
 		os.Exit(1)
 	}
 
-	fmt.Print("Steam password: ")
+	defaultPass := ddsm.Cfg.SteamPassword
+	if defaultPass != "" {
+		fmt.Printf("Steam password [%s]: ", strings.Repeat("*", len(defaultPass)))
+	} else {
+		fmt.Print("Steam password: ")
+	}
 	steamPass, _ := reader.ReadString('\n')
 	steamPass = strings.TrimSpace(steamPass)
+	if steamPass == "" {
+		steamPass = defaultPass
+	}
 	if steamPass == "" {
 		fmt.Fprintln(os.Stderr, "Steam password is required")
 		os.Exit(1)

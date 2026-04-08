@@ -15,13 +15,15 @@ type AutoSleepConfig struct {
 }
 
 type Config struct {
-	ServerIP     string          `yaml:"server_ip"`
-	RconPassword string          `yaml:"rcon_password"`
-	ServersDir   string          `yaml:"servers_dir"`
-	DockerImage  string          `yaml:"docker_image"`
-	DbPath       string          `yaml:"db_path"`
-	BaseDir      string          `yaml:"base_dir"`
-	AutoSleep    AutoSleepConfig `yaml:"autosleep"`
+	ServerIP      string          `yaml:"server_ip"`
+	RconPassword  string          `yaml:"rcon_password"`
+	ServersDir    string          `yaml:"servers_dir"`
+	DockerImage   string          `yaml:"docker_image"`
+	DbPath        string          `yaml:"db_path"`
+	BaseDir       string          `yaml:"base_dir"`
+	SteamLogin    string          `yaml:"steam_login"`
+	SteamPassword string          `yaml:"steam_password"`
+	AutoSleep     AutoSleepConfig `yaml:"autosleep"`
 }
 
 var Cfg Config
@@ -80,6 +82,12 @@ func LoadConfig() error {
 	}
 	if v := os.Getenv("DDSM_BASE_DIR"); v != "" {
 		Cfg.BaseDir = v
+	}
+	if v := os.Getenv("DDSM_STEAM_LOGIN"); v != "" {
+		Cfg.SteamLogin = v
+	}
+	if v := os.Getenv("DDSM_STEAM_PASSWORD"); v != "" {
+		Cfg.SteamPassword = v
 	}
 	if v := os.Getenv("DDSM_AUTOSLEEP_ENABLED"); v != "" {
 		Cfg.AutoSleep.Enabled = v == "true" || v == "1"

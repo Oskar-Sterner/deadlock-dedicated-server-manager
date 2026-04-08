@@ -76,6 +76,10 @@ func (m ConfigModel) View() string {
 	row("Servers dir:", cfg.ServersDir)
 	row("Docker image:", cfg.DockerImage)
 	row("Database:", cfg.DbPath)
+	if cfg.SteamLogin != "" {
+		row("Steam login:", cfg.SteamLogin)
+		row("Steam password:", strings.Repeat("*", len(cfg.SteamPassword)))
+	}
 	b.WriteString("\n")
 	row("Auto-sleep:", fmt.Sprintf("%v", cfg.AutoSleep.Enabled))
 	row("Idle timeout:", fmt.Sprintf("%ds", cfg.AutoSleep.IdleTimeout))
