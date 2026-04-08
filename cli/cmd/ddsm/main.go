@@ -13,7 +13,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const version = "0.1.0"
+const version = "0.2.0"
 
 const usage = `DDSM — Deadlock Dedicated Server Manager v%s
 
