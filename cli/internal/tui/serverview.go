@@ -41,7 +41,7 @@ func NewServerViewModel(serverID string) ServerViewModel {
 
 	volumePath := ddsm.ServerVolumePath(serverID)
 
-	return ServerViewModel{
+	m := ServerViewModel{
 		serverID:   serverID,
 		serverName: server.Name,
 		serverPort: server.Port,
@@ -49,6 +49,11 @@ func NewServerViewModel(serverID string) ServerViewModel {
 		config:     NewServerConfigModel(volumePath),
 		explorer:   NewExplorerModel(volumePath),
 	}
+	// Start with console input unfocused so q/tab work for navigation.
+	// User presses esc to focus the input for typing RCON commands.
+	m.console.inputFocus = false
+	m.console.input.Blur()
+	return m
 }
 
 func (m ServerViewModel) Init() tea.Cmd {
