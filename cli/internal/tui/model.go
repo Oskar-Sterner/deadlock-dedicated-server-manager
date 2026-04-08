@@ -61,7 +61,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case tea.KeyMsg:
-		inputActive := m.activeTab == TabServers && m.servers.creating
+		inputActive := m.activeTab == TabServers && (m.servers.creating || m.servers.viewing)
 
 		switch msg.String() {
 		case "ctrl+c":
@@ -112,7 +112,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, cmd
 
 	case configEditDoneMsg:
-		return m, nil
+		// Fall through to let active tab handle it
 	}
 
 	var cmd tea.Cmd

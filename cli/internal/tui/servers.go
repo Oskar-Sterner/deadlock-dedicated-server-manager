@@ -21,13 +21,15 @@ type switchToConsoleMsg struct {
 }
 
 type ServersModel struct {
-	servers  []*ddsm.ServerStatus
-	cursor   int
-	width    int
-	height   int
-	message  string
-	creating bool
-	create   CreateModel
+	servers    []*ddsm.ServerStatus
+	cursor     int
+	width      int
+	height     int
+	message    string
+	creating   bool
+	create     CreateModel
+	viewing    bool
+	serverView ServerViewModel
 }
 
 func NewServersModel() ServersModel {
@@ -67,12 +69,22 @@ func (m ServersModel) Update(msg tea.Msg) (ServersModel, tea.Cmd) {
 		m.create.errMsg = fmt.Sprintf("Error: %v", errMsg.err)
 		m.create.creating = false
 		return m, nil
+	case exitServerViewMsg:
+		m.viewing = false
+		return m, refreshServers()
 	}
 
 	// Delegate to create model when in create mode
 	if m.creating {
 		var cmd tea.Cmd
 		m.create, cmd = m.create.Update(msg)
+		return m, cmd
+	}
+
+	// Delegate to server view when viewing a server
+	if m.viewing {
+		var cmd tea.Cmd
+		m.serverView, cmd = m.serverView.Update(msg)
 		return m, cmd
 	}
 
@@ -124,7 +136,10 @@ func (m ServersModel) Update(msg tea.Msg) (ServersModel, tea.Cmd) {
 			}
 		case key.Matches(msg, key.NewBinding(key.WithKeys("enter"))):
 			if m.cursor < len(m.servers) {
-				return m, func() tea.Msg { return switchToConsoleMsg{serverID: m.servers[m.cursor].ID} }
+				m.viewing = true
+				m.serverView = NewServerViewModel(m.servers[m.cursor].ID)
+				m.serverView.SetSize(m.width, m.height)
+				return m, m.serverView.Init()
 			}
 		}
 	}
@@ -155,6 +170,10 @@ func serverAction(id, action string) tea.Cmd {
 func (m ServersModel) View() string {
 	if m.creating {
 		return m.create.View()
+	}
+
+	if m.viewing {
+		return m.serverView.View()
 	}
 
 	if len(m.servers) == 0 {
@@ -246,6 +265,9 @@ func statusAnsi(status string) string {
 func (m *ServersModel) SetSize(w, h int) {
 	m.width = w
 	m.height = h
+	if m.viewing {
+		m.serverView.SetSize(w, h)
+	}
 }
 
 func (m ServersModel) SelectedServer() *ddsm.ServerStatus {

@@ -44,6 +44,16 @@ var (
 	StatusWaking   = lipgloss.NewStyle().Foreground(Blue).Bold(true)
 	StatusUnknown  = lipgloss.NewStyle().Foreground(Gray)
 
+	SubTabActiveStyle = lipgloss.NewStyle().
+				Foreground(White).
+				Bold(true).
+				Underline(true).
+				Padding(0, 1)
+
+	SubTabInactiveStyle = lipgloss.NewStyle().
+				Foreground(Gray).
+				Padding(0, 1)
+
 	TitleStyle = lipgloss.NewStyle().
 			Foreground(Red).
 			Bold(true).
