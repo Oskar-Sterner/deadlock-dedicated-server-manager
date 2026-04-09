@@ -16,6 +16,7 @@ export interface ServerRow {
   steam_pass: string;
   steam_2fa: string;
   skip_update: number;
+  deadworks: number;
   container_id: string | null;
   created_at: string;
 }

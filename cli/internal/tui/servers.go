@@ -188,7 +188,7 @@ func (m ServersModel) View() string {
 
 	var b strings.Builder
 
-	header := fmt.Sprintf("  %-36s %-24s %-12s %-8s %-12s %-10s %-12s", "ID", "NAME", "STATUS", "PORT", "PLAYERS", "CPU", "MEMORY")
+	header := fmt.Sprintf("  %-36s %-24s %-12s %-8s %-12s %-12s %-10s %-12s", "ID", "NAME", "STATUS", "PORT", "DEADWORKS", "PLAYERS", "CPU", "MEMORY")
 	b.WriteString(lipgloss.NewStyle().Foreground(Gray).Width(m.width).Render(header))
 	b.WriteString("\n")
 	sepWidth := m.width - 4
@@ -224,10 +224,15 @@ func (m ServersModel) View() string {
 		statusColored := statusAnsi(s.Status) + fmt.Sprintf("%-12s", s.Status) + "\033[39;22m"
 
 		// Build line — statusColored has ANSI but fixed visible width of 12
-		line := fmt.Sprintf("  %-36s %-24s %s%-8d %-12s %-10s %-12s", id, name, statusColored, s.Port, players, cpu, mem)
+		dw := fmt.Sprintf("%-12s", "No")
+		if s.Deadworks == 1 {
+			dw = "\033[1;38;2;178;132;255m" + fmt.Sprintf("%-12s", "Yes") + "\033[39;22m"
+		}
+
+		line := fmt.Sprintf("  %-36s %-24s %s%-8d %s%-12s %-10s %-12s", id, name, statusColored, s.Port, dw, players, cpu, mem)
 
 		// Pad to full width based on visible length (subtract ANSI overhead)
-		visibleLen := 2 + 36 + 24 + 12 + 8 + 12 + 10 + 12
+		visibleLen := 2 + 36 + 24 + 12 + 8 + 12 + 12 + 10 + 12
 		pad := m.width - visibleLen
 		if pad > 0 {
 			line += strings.Repeat(" ", pad)

@@ -10,6 +10,7 @@ interface ServerData {
   name: string;
   port: number;
   map: string;
+  deadworks: number;
   status: string;
   stats: { cpuPercent: number; memoryMb: number; memoryLimitMb: number } | null;
   players: number | null;
