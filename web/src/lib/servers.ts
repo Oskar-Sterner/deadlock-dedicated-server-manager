@@ -34,6 +34,26 @@ export function getNextPort(): number {
   return (row?.maxPort ?? 27014) + 1;
 }
 
+// Where the Deadlock game directory lives for this server. Servers created
+// via the CLI use overlayfs and the game dir is under merged/, while plain
+// installs put it directly under the server volume.
+function deadlockGameDir(id: string): string {
+  const overlayed = path.join(SERVERS_DIR, id, "merged", "Deadlock", "game");
+  if (fs.existsSync(overlayed)) return overlayed;
+  return path.join(SERVERS_DIR, id, "Deadlock", "game");
+}
+
+// Mirror the dashboard "Server Name" into the in-game hostname convar by
+// writing citadel/cfg/server.cfg, which Source 2 auto-execs on map load.
+// Embedded double quotes are stripped — Source's quoting can't escape them.
+export function writeHostnameCfg(id: string, hostname: string): void {
+  const cfgDir = path.join(deadlockGameDir(id), "citadel", "cfg");
+  if (!fs.existsSync(path.dirname(cfgDir))) return; // game dir not provisioned yet
+  fs.mkdirSync(cfgDir, { recursive: true });
+  const sanitized = hostname.replace(/"/g, "");
+  fs.writeFileSync(path.join(cfgDir, "server.cfg"), `hostname "${sanitized}"\n`);
+}
+
 export async function createServer(data: {
   name: string;
   port: number;
@@ -72,6 +92,8 @@ export async function createServer(data: {
     INSERT INTO servers (id, name, port, map, password, steam_login, steam_pass, steam_2fa, skip_update, container_id)
     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?)
   `).run(id, data.name, data.port, data.map, data.password, data.steam_login, data.steam_pass, data.steam_2fa, containerId);
+
+  writeHostnameCfg(id, data.name);
 
   await startContainer(containerId);
   return getServer(id)!;
@@ -124,6 +146,8 @@ export async function updateServer(id: string, data: {
     UPDATE servers SET name=?, port=?, map=?, password=?, steam_login=?, steam_pass=?, steam_2fa=?, skip_update=?, container_id=?
     WHERE id=?
   `).run(data.name, data.port, data.map, data.password, data.steam_login, data.steam_pass, data.steam_2fa, data.skip_update, containerId, id);
+
+  writeHostnameCfg(id, data.name);
 
   await startContainer(containerId);
   return getServer(id)!;
