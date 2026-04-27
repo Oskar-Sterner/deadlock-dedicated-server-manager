@@ -10,7 +10,7 @@
 
 Manage multiple [Deadlock](https://store.steampowered.com/app/1422450/Deadlock/) dedicated server instances on Linux. Includes a Go CLI with an interactive TUI and a Next.js web dashboard.
 
-Built on top of [deadlock-dedicated-proton-server](https://github.com/Oskar-Sterner/deadlock-dedicated-proton-server).
+Built on top of [deadlock-dedicated-proton-server](https://github.com/Oskar-Sterner/deadlock-dedicated-proton-server). The Docker image bundles the [Deadworks](https://github.com/Deadworks-net/deadworks) modding framework, so every server created by DDSM is a Deadworks server out of the box — no per-server toggle to manage.
 
 ## Project Structure
 

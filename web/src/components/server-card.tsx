@@ -10,7 +10,6 @@ interface ServerCardProps {
   name: string;
   port: number;
   map: string;
-  deadworks: number;
   status: string;
   stats: { cpuPercent: number; memoryMb: number; memoryLimitMb: number } | null;
   onAction: (id: string, action: string) => void;
@@ -47,7 +46,7 @@ function copyToClipboard(text: string): boolean {
   }
 }
 
-export function ServerCard({ id, name, port, map, deadworks, status, stats, onAction, players, maxPlayers, serverIp = "" }: ServerCardProps) {
+export function ServerCard({ id, name, port, map, status, stats, onAction, players, maxPlayers, serverIp = "" }: ServerCardProps) {
   const [copied, setCopied] = useState(false);
 
   function handleCopy() {
@@ -91,7 +90,6 @@ export function ServerCard({ id, name, port, map, deadworks, status, stats, onAc
       <div className="text-sm text-neutral-400 space-y-1 mb-4">
         <p>Port: <span className="text-neutral-200">{port}</span></p>
         <p>Map: <span className="text-neutral-200">{map}</span></p>
-        <p>Deadworks: <span className={deadworks === 1 ? "text-emerald-400" : "text-red-400"}>{deadworks === 1 ? "Yes" : "No"}</span></p>
         <p>Players: <span className="text-neutral-200">{players ?? 0} / {maxPlayers ?? "?"}</span></p>
       </div>
 

@@ -18,7 +18,6 @@ const (
 	fieldPort
 	fieldMap
 	fieldPassword
-	fieldDeadworks
 	fieldSteamLogin
 	fieldSteamPass
 	fieldSteam2FA
@@ -45,7 +44,6 @@ type CreateModel struct {
 	height       int
 	creating     bool
 	errMsg       string
-	deadworks    bool
 	progressMsg  string
 	progressChan <-chan string
 	spinner      spinner.Model
@@ -60,7 +58,6 @@ func NewCreateModel() CreateModel {
 		"Port",
 		"Map",
 		"Password",
-		"Deadworks",
 		"Steam login",
 		"Steam password",
 		"Steam 2FA code",
@@ -80,8 +77,6 @@ func NewCreateModel() CreateModel {
 	inputs[fieldMap].SetValue("dl_hideout")
 
 	inputs[fieldPassword].Placeholder = "optional"
-
-	inputs[fieldDeadworks].Placeholder = "press [enter] to toggle"
 
 	if ddsm.Cfg.SteamLogin != "" {
 		inputs[fieldSteamLogin].SetValue(ddsm.Cfg.SteamLogin)
@@ -165,11 +160,6 @@ func (m CreateModel) Update(msg tea.Msg) (CreateModel, tea.Cmd) {
 			return m, textinput.Blink
 
 		case "enter":
-			if m.focus == int(fieldDeadworks) {
-				m.deadworks = !m.deadworks
-				return m, nil
-			}
-
 			if m.focus < int(fieldCount)-1 {
 				m.inputs[m.focus].Blur()
 				m.focus++
@@ -177,17 +167,7 @@ func (m CreateModel) Update(msg tea.Msg) (CreateModel, tea.Cmd) {
 				return m, textinput.Blink
 			}
 			return m.validateAndSubmit()
-
-		case " ":
-			if m.focus == int(fieldDeadworks) {
-				m.deadworks = !m.deadworks
-				return m, nil
-			}
 		}
-	}
-
-	if m.focus == int(fieldDeadworks) {
-		return m, nil
 	}
 
 	var cmd tea.Cmd
@@ -236,7 +216,6 @@ func (m CreateModel) validateAndSubmit() (CreateModel, tea.Cmd) {
 
 	password := strings.TrimSpace(m.inputs[fieldPassword].Value())
 	steam2FA := strings.TrimSpace(m.inputs[fieldSteam2FA].Value())
-	deadworks := m.deadworks
 
 	m.creating = true
 	m.progressMsg = "Initializing..."
@@ -253,7 +232,6 @@ func (m CreateModel) validateAndSubmit() (CreateModel, tea.Cmd) {
 			SteamLogin: steamLogin,
 			SteamPass:  steamPass,
 			Steam2FA:   steam2FA,
-			Deadworks:  deadworks,
 		}, progressCh)
 		if err != nil {
 			return serverCreateErrMsg{err: err}
@@ -278,22 +256,10 @@ func (m CreateModel) View() string {
 		cursor := "  "
 		if i == m.focus {
 			ls = focusedLabelStyle
-			cursor = "\u25b8 "
+			cursor = "▸ "
 		}
 
 		label := ls.Render(m.labels[i] + ":")
-
-		if i == int(fieldDeadworks) {
-			checkbox := "[ ]"
-			desc := lipgloss.NewStyle().Foreground(Gray).Render("  Install Deadworks mod framework")
-			if m.deadworks {
-				checkbox = lipgloss.NewStyle().Foreground(Green).Bold(true).Render("[x]")
-				desc = lipgloss.NewStyle().Foreground(Green).Render("  Deadworks will be installed")
-			}
-			b.WriteString(cursor + label + " " + checkbox + desc)
-			b.WriteString("\n")
-			continue
-		}
 
 		b.WriteString(cursor + label + " " + input.View())
 
@@ -313,7 +279,7 @@ func (m CreateModel) View() string {
 	}
 
 	b.WriteString("\n")
-	b.WriteString(HelpStyle.Render("  [tab/\u2191\u2193] navigate  [enter] next/submit  [space] toggle  [esc] cancel"))
+	b.WriteString(HelpStyle.Render("  [tab/↑↓] navigate  [enter] next/submit  [esc] cancel"))
 	b.WriteString("\n")
 
 	return b.String()

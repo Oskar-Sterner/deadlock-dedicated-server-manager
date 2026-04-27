@@ -25,6 +25,7 @@ ARGS="-dedicated -usercon -ip 0.0.0.0 -convars_visible_by_default -allow_no_lobb
 
 DEADLOCK_DIR=/app/Deadlock
 DEADLOCK_EXE="${DEADLOCK_DIR}/game/bin/win64/deadlock.exe"
+DEADWORKS_EXE="${DEADLOCK_DIR}/game/bin/win64/deadworks.exe"
 
 mkdir -p "${DEADLOCK_DIR}"
 DIR_PERM=$(stat -c "%u:%g:%a" "${DEADLOCK_DIR}")
@@ -56,8 +57,26 @@ if [ ! -f "${DEADLOCK_EXE}" ]; then
     die
 fi
 
-# --- Launch server ---
+# --- Overlay Deadworks files into the game directory ---
+# Deadworks is bundled in the image at /opt/deadworks. Re-applied on every
+# start so SteamCMD validation can't strip it.
 
-CMD="${PROTON} run ${DEADLOCK_EXE} ${ARGS}"
-echo "Starting Deadlock server: ${CMD}"
+DEADWORKS_SRC="${DEADWORKS_DIR:-/opt/deadworks}"
+if [ -d "${DEADWORKS_SRC}/game" ]; then
+    echo "Applying Deadworks framework from ${DEADWORKS_SRC}..."
+    cp -rf "${DEADWORKS_SRC}/game/." "${DEADLOCK_DIR}/game/"
+else
+    echo "ERROR: Deadworks files not found at ${DEADWORKS_SRC}"
+    die
+fi
+
+if [ ! -f "${DEADWORKS_EXE}" ]; then
+    echo "ERROR: ${DEADWORKS_EXE} not found after Deadworks overlay"
+    die
+fi
+
+# --- Launch server via deadworks.exe ---
+
+CMD="${PROTON} run ${DEADWORKS_EXE} ${ARGS}"
+echo "Starting Deadworks server: ${CMD}"
 exec ${CMD}
