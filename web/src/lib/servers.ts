@@ -2,6 +2,7 @@ import { v4 as uuid } from "uuid";
 import { getDb } from "./db";
 import { createContainer, removeContainer, startContainer } from "./docker";
 import { SERVERS_DIR } from "./config";
+import { resetSleepState } from "./autosleep";
 import fs from "fs";
 import path from "path";
 const START_SCRIPT_SRC = path.join(process.cwd(), "start.sh");
@@ -89,9 +90,17 @@ export async function updateServer(id: string, data: {
   const server = getServer(id);
   if (!server) throw new Error("Server not found");
 
+  // Free any wake-listener bound to the server's port; otherwise the
+  // recreate below fails to bind with "address already in use".
+  resetSleepState(id);
+
   if (server.container_id) {
     try { await removeContainer(server.container_id); } catch { /* ok */ }
   }
+
+  // Brief pause so the kernel fully releases the port (TCP TIME_WAIT,
+  // listener teardown, etc.) before the new container tries to bind.
+  await new Promise((r) => setTimeout(r, 500));
 
   const volumePath = path.join(SERVERS_DIR, id);
   const containerName = `deadlock-${id.slice(0, 8)}`;

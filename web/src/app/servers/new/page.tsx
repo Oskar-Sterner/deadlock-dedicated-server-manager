@@ -76,11 +76,19 @@ export default function NewServerPage() {
           </div>
           <div>
             <label className={labelClass}>Map</label>
-            <select className={inputClass} value={form.map} onChange={(e) => update("map", e.target.value)}>
-              <option value="dl_streets">dl_streets</option>
-              <option value="dl_midtown">dl_midtown</option>
-              <option value="dl_hideout">dl_hideout</option>
-            </select>
+            <input
+              className={inputClass}
+              value={form.map}
+              onChange={(e) => update("map", e.target.value)}
+              list="known-maps"
+              placeholder="dl_streets"
+              required
+            />
+            <datalist id="known-maps">
+              <option value="dl_streets" />
+              <option value="dl_midtown" />
+              <option value="dl_hideout" />
+            </datalist>
           </div>
         </div>
 
