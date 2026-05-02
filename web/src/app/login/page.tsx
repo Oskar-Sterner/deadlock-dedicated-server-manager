@@ -8,12 +8,14 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSetup, setIsSetup] = useState(false);
+  const [needsSetup, setNeedsSetup] = useState(false);
   const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
     fetch("/api/setup").then(async (r) => {
       const data = await r.json();
+      setNeedsSetup(data.setup);
       setIsSetup(data.setup);
       setLoading(false);
     });
@@ -36,6 +38,7 @@ export default function LoginPage() {
       const data = await res.json();
       if (data.error === "Already configured") {
         setIsSetup(false);
+        setNeedsSetup(false);
         setError("Password already set. Please log in.");
       } else {
         setError(data.error || "Failed");
@@ -85,7 +88,7 @@ export default function LoginPage() {
           </motion.button>
         </form>
 
-        {!isSetup && (
+        {needsSetup && !isSetup && (
           <button
             onClick={() => setIsSetup(true)}
             className="cursor-pointer w-full mt-3 text-sm text-neutral-500 hover:text-neutral-300 transition-colors"
