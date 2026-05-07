@@ -10,4 +10,6 @@ export const DEADLOCK_IMAGE = process.env.DDSM_DOCKER_IMAGE || "deadlock-server"
  *
  * Off by default — when off, the route returns 404 (no leak that it exists).
  */
-export const PUBLIC_API_ENABLED = process.env.DDSM_PUBLIC_API_ENABLED === "true";
+export function isPublicApiEnabled(): boolean {
+  return process.env.DDSM_PUBLIC_API_ENABLED === "true";
+}
