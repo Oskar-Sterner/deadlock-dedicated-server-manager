@@ -127,6 +127,25 @@ DDSM_SERVERS_DIR=/opt/deadlock-servers
 DDSM_DOCKER_IMAGE=deadlock-server
 ```
 
+#### Public read-only API (optional)
+
+Set `DDSM_PUBLIC_API_ENABLED=true` to expose `GET /api/public/servers`. Useful when fronting DDSM behind a public landing page or status dashboard.
+
+The endpoint is:
+
+- **Read-only** — no admin actions, no mutations.
+- **Stripped** — the response contains `id`, `name`, `port`, `map`, `status`, `players`, `maxPlayers`, `cpuPercent`, `memoryMb`, `memoryLimitMb`, `memoryPercent`, `startedAt`, `uptimeSeconds`. It never contains `password`, `steam_login`, `steam_pass`, `steam_2fa`, `container_id`, or `created_at`.
+- **Rate-limited** to 60 requests/minute per IP (in-memory token bucket).
+- **Cached** with `Cache-Control: max-age=4`. Pair with an nginx `proxy_cache` if exposed publicly.
+
+Returns `404 {"error":"Not Found"}` when the env var is unset (so probing reveals nothing).
+
+Example:
+
+```bash
+curl -s http://localhost:3000/api/public/servers | jq .
+```
+
 ## Tech Stack
 
 **CLI (beta):**
