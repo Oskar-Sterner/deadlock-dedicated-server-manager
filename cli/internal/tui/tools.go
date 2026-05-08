@@ -97,7 +97,7 @@ func (m ToolsModel) Update(msg tea.Msg) (ToolsModel, tea.Cmd) {
 				m.output.SetContent(m.outputStr)
 				return m, resolvePublicIP()
 			case 2:
-				m.outputStr = "  DDSM \u2014 Deadlock Dedicated Server Manager v0.2.0\n  https://github.com/Oskar-Sterner/deadlock-dedicated-server-manager\n"
+				m.outputStr = "  DDSM \u2014 Deadlock Dedicated Server Manager v0.2.3\n  https://github.com/Oskar-Sterner/deadlock-dedicated-server-manager\n"
 				m.output.SetContent(m.outputStr)
 			}
 		}

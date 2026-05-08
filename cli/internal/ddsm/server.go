@@ -298,7 +298,12 @@ func StartServer(id string) error {
 		}
 	}
 	ResetSleepState(id)
-	return StartContainer(server.ContainerID.String)
+
+	containerID, err := ensureContainerVolume(server)
+	if err != nil {
+		return err
+	}
+	return StartContainer(containerID)
 }
 
 func StopServer(id string) error {
@@ -321,8 +326,86 @@ func RestartServer(id string) error {
 	if !server.ContainerID.Valid {
 		return fmt.Errorf("server has no container: %s", id)
 	}
+	if UsesOverlay(id) {
+		if err := MountOverlay(id); err != nil {
+			return fmt.Errorf("failed to mount overlay: %w", err)
+		}
+	}
 	ResetSleepState(id)
-	return RestartContainer(server.ContainerID.String)
+
+	containerID, recreated, err := ensureContainerVolumeStatus(server)
+	if err != nil {
+		return err
+	}
+	if recreated {
+		// Recreated containers are not yet running — start instead of restart.
+		return StartContainer(containerID)
+	}
+	return RestartContainer(containerID)
+}
+
+// ensureContainerVolume verifies the existing container's /app bind mount
+// matches the expected volume path (the overlayfs merged dir for overlay
+// servers, slot root otherwise). If the container is missing or has a stale
+// bind mount — e.g. because it was created before the overlay-merged-path
+// fix landed — it is removed and recreated from the DB row. Returns the
+// (possibly new) container ID. The slot's upper/ overlay layer is untouched,
+// so plugin state, configs, maps, and records are preserved.
+func ensureContainerVolume(server *ServerRow) (string, error) {
+	id, _, err := ensureContainerVolumeStatus(server)
+	return id, err
+}
+
+func ensureContainerVolumeStatus(server *ServerRow) (string, bool, error) {
+	expected := ServerVolumePath(server.ID)
+
+	info, inspectErr := DockerClient().ContainerInspect(context.Background(), server.ContainerID.String)
+	if inspectErr == nil {
+		for _, m := range info.Mounts {
+			if m.Destination == "/app" && m.Source == expected {
+				return server.ContainerID.String, false, nil
+			}
+		}
+	}
+
+	// Either the container is gone or its /app mount points at the wrong
+	// source. Recreate it with the correct bind mount, preserving env from
+	// the DB row.
+	useOverlay := UsesOverlay(server.ID)
+	if useOverlay {
+		if err := MountOverlay(server.ID); err != nil {
+			return "", false, fmt.Errorf("failed to mount overlay: %w", err)
+		}
+	}
+
+	if inspectErr == nil {
+		// Best-effort cleanup of the old container; ignore errors so a
+		// half-broken container doesn't block the recreate.
+		RemoveContainer(server.ContainerID.String)
+	}
+
+	skipUpdate := "0"
+	if useOverlay {
+		skipUpdate = "1"
+	}
+	env := map[string]string{
+		"PORT":            fmt.Sprintf("%d", server.Port),
+		"MAP":             server.Map,
+		"SERVER_PASSWORD": server.Password,
+		"STEAM_LOGIN":     server.SteamLogin,
+		"STEAM_PASSWORD":  server.SteamPass,
+		"STEAM_2FA_CODE":  server.Steam2FA,
+		"SKIP_UPDATE":     skipUpdate,
+	}
+	containerName := fmt.Sprintf("deadlock-%s", server.ID[:8])
+	newID, err := CreateContainer(containerName, server.Port, env, expected, useOverlay)
+	if err != nil {
+		return "", false, fmt.Errorf("failed to recreate container: %w", err)
+	}
+	if err := UpdateServerContainerID(server.ID, newID); err != nil {
+		return "", false, fmt.Errorf("failed to update container ID: %w", err)
+	}
+	return newID, true, nil
 }
 
 func ForEachServer(action func(string) error) error {

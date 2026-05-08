@@ -24,3 +24,4 @@ next-env.d.ts
 
 # data directory
 /data
+cli/ddsm-linux-amd64
