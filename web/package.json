@@ -1,11 +1,12 @@
 {
   "name": "deadlock-dedicated-server-manager",
-  "version": "0.1.0",
+  "version": "0.2.2",
   "private": true,
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "test": "bun test --pass-with-no-tests"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
