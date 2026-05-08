@@ -3,7 +3,14 @@ import { NextRequest, NextResponse } from "next/server";
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  if (pathname === "/login" || pathname.startsWith("/api/auth") || pathname.startsWith("/api/setup") || pathname.startsWith("/_next") || pathname === "/favicon.ico") {
+  if (
+    pathname === "/login" ||
+    pathname.startsWith("/api/auth") ||
+    pathname.startsWith("/api/setup") ||
+    pathname.startsWith("/api/public") ||
+    pathname.startsWith("/_next") ||
+    pathname === "/favicon.ico"
+  ) {
     return NextResponse.next();
   }
 
