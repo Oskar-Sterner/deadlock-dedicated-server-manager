@@ -24,6 +24,11 @@ type Config struct {
 	SteamLogin    string          `yaml:"steam_login"`
 	SteamPassword string          `yaml:"steam_password"`
 	AutoSleep     AutoSleepConfig `yaml:"autosleep"`
+	// Optional CPU pinning for the gameserver container. Source 2 sim is
+	// single-threaded, so pinning to a small set of physical cores (skipping
+	// SMT siblings) eliminates cache-thrashing migration between cores.
+	// Format: comma-separated cpu list, e.g. "0,1" or "0-1". Empty = no pin.
+	CpusetCpus string `yaml:"cpuset_cpus"`
 }
 
 var Cfg Config
@@ -101,6 +106,9 @@ func LoadConfig() error {
 		if n, err := strconv.Atoi(v); err == nil {
 			Cfg.AutoSleep.PollInterval = n
 		}
+	}
+	if v := os.Getenv("DDSM_CPUSET_CPUS"); v != "" {
+		Cfg.CpusetCpus = v
 	}
 
 	return nil

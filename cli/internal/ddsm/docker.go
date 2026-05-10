@@ -155,6 +155,12 @@ func CreateContainer(name string, port int, env map[string]string, volumePath st
 				portUDP: []nat.PortBinding{{HostPort: portStr}},
 			},
 			RestartPolicy: container.RestartPolicy{Name: "always"},
+			Resources: container.Resources{
+				// Optional CPU pinning from Cfg.CpusetCpus. Empty string =
+				// unpinned (Docker default). On a small-core VPS this avoids
+				// the Source 2 main thread thrashing between cores / CCDs.
+				CpusetCpus: Cfg.CpusetCpus,
+			},
 		},
 		nil, nil, name,
 	)
